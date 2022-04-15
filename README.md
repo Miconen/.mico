@@ -1,2 +1,5 @@
 # .mico
-All my .config files i want to version control
+
+```sh
+git clone https://github.com/Miconen/.mico.git ~/.config
+```
