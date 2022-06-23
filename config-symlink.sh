@@ -11,7 +11,7 @@ fi
 # Kitty config
 
 kitty=~/.config/kitty/
-if ! [ -L "$kitty" ] && ! [-e "$kitty"];
+if ! [[ -L "$kitty" ]];
 then
 	echo "No existing symlink found for $kitty"
 	rm -rf ~/.config/kitty/
@@ -20,7 +20,7 @@ ln -sf "$PWD/kitty/" ~/.config/
 
 # Nvim config
 nvim=~/.config/nvim/
-if ! [ -L "$nvim" ] && ! [-e "$nvim"];
+if ! [[ -L "$nvim" ]];
 then
 	echo "No existing symlink found for $nvim"
 	rm -rf ~/.config/nvim/
@@ -29,7 +29,7 @@ ln -sf "$PWD/nvim/" ~/.config/
 
 # zshrc
 zsh=~/.config/zsh/
-if ! [ -L "$zsh" ] && ! [-e "$zsh"];
+if ! [[ -L "$zsh" ]];
 then
 	echo "No existing symlink found for $zsh"
 	rm ~/.zshrc
