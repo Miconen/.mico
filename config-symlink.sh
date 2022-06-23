@@ -17,6 +17,9 @@ prepare_folder () {
 	fi
 }
 
+# $1 = Config location
+# $2 = Config location ( repo )
+# $3 = Config location root folder
 symlink_folder () {
 	# Remove old folders if not yet linked
 	prepare_folder "$1"
@@ -26,10 +29,10 @@ symlink_folder () {
 }
 
 # Kitty config
-symlink_folder "~/.config/kitty/" "$PWD/kitty/" "~/.config/"
+symlink_folder ~/.config/kitty/ "$PWD/kitty/" ~/.config/
 # Nvim config
-symlink_folder "~/.config/nvim/" "$PWD/nvim/" "~/.config/"
+symlink_folder ~/.config/nvim/ "$PWD/nvim/" ~/.config/
 # zshrc
-symlink_folder "~/.zshrc" "$PWD/.zshrc" "~"
+symlink_folder ~/.zshrc "$PWD/.zshrc" ~
 
 echo 'Symlinked config files :)'
