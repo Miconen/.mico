@@ -9,15 +9,31 @@ then
 fi
 
 # Kitty config
-rm -rf ~/.config/kitty/
+
+kitty=~/.config/kitty/
+if ! [ -L "$kitty" ];
+then
+	echo "No existing symlink found for $kitty"
+	rm -rf ~/.config/kitty/
+fi
 ln -sf "$PWD/kitty/" ~/.config/
 
 # Nvim config
-rm -rf ~/.config/nvim/
+nvim=~/.config/nvim/
+if ! [ -L "$nvim" ];
+then
+	echo "No existing symlink found for $nvim"
+	rm -rf ~/.config/nvim/
+fi
 ln -sf "$PWD/nvim/" ~/.config/
 
 # zshrc
-rm ~/.zshrc
+zsh=~/.config/zsh/
+if ! [ -L "$zsh" ];
+then
+	echo "No existing symlink found for $zsh"
+	rm ~/.zshrc
+fi
 ln -sf "$PWD/.zshrc" ~
 
 echo 'Symlinked config files :)'
