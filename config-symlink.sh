@@ -8,32 +8,28 @@ then
 	[[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1 # handle exits from shell or function but don't exit interactive shell
 fi
 
+prepare_folder () {
+	echo "Preparing"
+	if ! [[ -L "$1" ]];
+	then
+		echo "Removing"
+		rm -rf "$1"
+	fi
+}
+
+symlink_folder () {
+	# Remove old folders if not yet linked
+	prepare_folder "$1"
+	# Link folders
+	echo "Linking"
+	ln -sf "$2" "$3"
+}
+
 # Kitty config
-
-kitty=~/.config/kitty/
-if ! [[ -L "$kitty" ]];
-then
-	echo "No existing symlink found for $kitty"
-	rm -rf ~/.config/kitty/
-fi
-ln -sf "$PWD/kitty/" ~/.config/
-
+symlink_folder "~/.config/kitty/" "$PWD/kitty/" "~/.config/"
 # Nvim config
-nvim=~/.config/nvim/
-if ! [[ -L "$nvim" ]];
-then
-	echo "No existing symlink found for $nvim"
-	rm -rf ~/.config/nvim/
-fi
-ln -sf "$PWD/nvim/" ~/.config/
-
+symlink_folder "~/.config/nvim/" "$PWD/nvim/" "~/.config/"
 # zshrc
-zsh=~/.config/zsh/
-if ! [[ -L "$zsh" ]];
-then
-	echo "No existing symlink found for $zsh"
-	rm ~/.zshrc
-fi
-ln -sf "$PWD/.zshrc" ~
+symlink_folder "~/.zshrc" "$PWD/.zshrc" "~"
 
 echo 'Symlinked config files :)'
