@@ -14,3 +14,13 @@ vim.cmd([[set guifont=Classic\ Console\ Neue:h11]])
 vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
+-- Tab set to four spaces
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+vim.opt.softtabstop = 4
+vim.opt.expandtab = true
+
+local lsp = require('lsp-zero')
+
+lsp.preset('recommended')
+lsp.setup()
