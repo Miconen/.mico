@@ -1,26 +1,45 @@
-require('plugins')
+require('basics')
+require('colors')
+require('telescope-config')
+require('coc-config')
+require('lualine').setup()
 
-vim.o.background = "dark"
-vim.o.termguicolors = true
-vim.api.nvim_set_var('gruvbox_contrast_dark', 'hard')
-vim.api.nvim_set_var('gruvbox_invert_selection', '0')
+require'nvim-treesitter.configs'.setup {
+  ensure_installed = "all",
+  ignore_install = { "phpdoc" },
+  context_commentstring = {
+    enable = true
+  },
+  highlight = {
+    enable = true,
+    disable = { "lua" }
+  },
+  indent = {
+    enable = true
+  }
+}
 
-vim.api.nvim_set_var('&t_8f', '<Esc>[38;2;%lu;%lu;%lum')
-vim.api.nvim_set_var('&t_8f', '<Esc>[48;2;%lu;%lu;%lum')
-
-vim.cmd([[colorscheme gruvbox]])
-vim.cmd([[set guifont=Classic\ Console\ Neue:h11]])
-
-vim.g.mapleader = " "
-vim.g.maplocalleader = ","
-
--- Tab set to four spaces
-vim.opt.tabstop = 4
-vim.opt.shiftwidth = 4
-vim.opt.softtabstop = 4
-vim.opt.expandtab = true
-
-local lsp = require('lsp-zero')
-
-lsp.preset('recommended')
-lsp.setup()
+return require('packer').startup(function()
+  use 'wbthomason/packer.nvim'
+  use {'neoclide/coc.nvim', branch = 'release'}
+  use { "ellisonleao/gruvbox.nvim" }
+  use 'nvim-treesitter/nvim-treesitter' 
+  use 'tpope/vim-commentary'
+  use 'JoosepAlviste/nvim-ts-context-commentstring'
+  use 'lukas-reineke/indent-blankline.nvim'
+  use {
+    'nvim-telescope/telescope.nvim',
+    requires = { {'nvim-lua/plenary.nvim'} }
+  }
+  use {
+    'nvim-lualine/lualine.nvim',
+    requires = { 'kyazdani42/nvim-web-devicons', opt = true }
+  }
+  use { "nvim-telescope/telescope-file-browser.nvim" }
+  use {
+    "ur4ltz/surround.nvim",
+    config = function()
+      require"surround".setup {mappings_style = "surround"}
+    end
+  }
+end)
