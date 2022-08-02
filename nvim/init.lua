@@ -42,4 +42,8 @@ return require('packer').startup(function()
       require"surround".setup {mappings_style = "surround"}
     end
   }
+  -- Hardmode vim
+    -- :call HardMode() to enable
+    -- :call EasyMode() to disable
+  use 'wikitopian/hardmode'
 end)

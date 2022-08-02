@@ -79,6 +79,11 @@ _G.packer_plugins = {
     path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\gruvbox.nvim",
     url = "https://github.com/ellisonleao/gruvbox.nvim"
   },
+  hardmode = {
+    loaded = true,
+    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\hardmode",
+    url = "https://github.com/wikitopian/hardmode"
+  },
   ["indent-blankline.nvim"] = {
     loaded = true,
     path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\indent-blankline.nvim",
