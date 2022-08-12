@@ -54,12 +54,8 @@ vim.cmd([[
 ]])
 
 -- Set block level indenting to tab & shift-tab, also retain selection after motion
-vim.api.nvim_set_keymap('v', '<Tab>', '>gv', { noremap = true })
-vim.api.nvim_set_keymap('v', '<S-Tab>', '<gv', { noremap = true })
-
--- Indent whole line in normal mode
-vim.api.nvim_set_keymap('n', '<Tab>', '<S-v>>', { noremap = true })
-vim.api.nvim_set_keymap('n', '<S-Tab>', '<S-v><', { noremap = true })
+vim.api.nvim_set_keymap('v', '>', '>gv', { noremap = true })
+vim.api.nvim_set_keymap('v', '<', '<gv', { noremap = true })
 
 -- Set shared clipboard between os and nvim
 vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
