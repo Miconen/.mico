@@ -44,8 +44,8 @@ local function save_profiles(threshold)
 end
 
 time([[Luarocks path setup]], true)
-local package_path_str = "C:\\Users\\micor\\AppData\\Local\\Temp\\nvim\\packer_hererocks\\2.1.0-beta3\\share\\lua\\5.1\\?.lua;C:\\Users\\micor\\AppData\\Local\\Temp\\nvim\\packer_hererocks\\2.1.0-beta3\\share\\lua\\5.1\\?\\init.lua;C:\\Users\\micor\\AppData\\Local\\Temp\\nvim\\packer_hererocks\\2.1.0-beta3\\lib\\luarocks\\rocks-5.1\\?.lua;C:\\Users\\micor\\AppData\\Local\\Temp\\nvim\\packer_hererocks\\2.1.0-beta3\\lib\\luarocks\\rocks-5.1\\?\\init.lua"
-local install_cpath_pattern = "C:\\Users\\micor\\AppData\\Local\\Temp\\nvim\\packer_hererocks\\2.1.0-beta3\\lib\\lua\\5.1\\?.so"
+local package_path_str = "/home/mico/.cache/nvim/packer_hererocks/2.1.0-beta3/share/lua/5.1/?.lua;/home/mico/.cache/nvim/packer_hererocks/2.1.0-beta3/share/lua/5.1/?/init.lua;/home/mico/.cache/nvim/packer_hererocks/2.1.0-beta3/lib/luarocks/rocks-5.1/?.lua;/home/mico/.cache/nvim/packer_hererocks/2.1.0-beta3/lib/luarocks/rocks-5.1/?/init.lua"
+local install_cpath_pattern = "/home/mico/.cache/nvim/packer_hererocks/2.1.0-beta3/lib/lua/5.1/?.so"
 if not string.find(package.path, package_path_str, 1, true) then
   package.path = package.path .. ';' .. package_path_str
 end
@@ -71,73 +71,73 @@ time([[Defining packer_plugins]], true)
 _G.packer_plugins = {
   ["coc.nvim"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\coc.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/coc.nvim",
     url = "https://github.com/neoclide/coc.nvim"
   },
   ["gruvbox.nvim"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\gruvbox.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/gruvbox.nvim",
     url = "https://github.com/ellisonleao/gruvbox.nvim"
   },
   hardmode = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\hardmode",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/hardmode",
     url = "https://github.com/wikitopian/hardmode"
   },
   ["indent-blankline.nvim"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\indent-blankline.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/indent-blankline.nvim",
     url = "https://github.com/lukas-reineke/indent-blankline.nvim"
   },
   ["lualine.nvim"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\lualine.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/lualine.nvim",
     url = "https://github.com/nvim-lualine/lualine.nvim"
   },
   ["nvim-treesitter"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\nvim-treesitter",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/nvim-treesitter",
     url = "https://github.com/nvim-treesitter/nvim-treesitter"
   },
   ["nvim-ts-context-commentstring"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\nvim-ts-context-commentstring",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/nvim-ts-context-commentstring",
     url = "https://github.com/JoosepAlviste/nvim-ts-context-commentstring"
   },
   ["nvim-web-devicons"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\nvim-web-devicons",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/nvim-web-devicons",
     url = "https://github.com/kyazdani42/nvim-web-devicons"
   },
   ["packer.nvim"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\packer.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/packer.nvim",
     url = "https://github.com/wbthomason/packer.nvim"
   },
   ["plenary.nvim"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\plenary.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/plenary.nvim",
     url = "https://github.com/nvim-lua/plenary.nvim"
   },
   ["surround.nvim"] = {
     config = { "\27LJ\2\nU\0\0\3\0\4\0\a6\0\0\0'\2\1\0B\0\2\0029\0\2\0005\2\3\0B\0\2\1K\0\1\0\1\0\1\19mappings_style\rsurround\nsetup\rsurround\frequire\0" },
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\surround.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/surround.nvim",
     url = "https://github.com/ur4ltz/surround.nvim"
   },
   ["telescope-file-browser.nvim"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\telescope-file-browser.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/telescope-file-browser.nvim",
     url = "https://github.com/nvim-telescope/telescope-file-browser.nvim"
   },
   ["telescope.nvim"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\telescope.nvim",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/telescope.nvim",
     url = "https://github.com/nvim-telescope/telescope.nvim"
   },
   ["vim-commentary"] = {
     loaded = true,
-    path = "C:\\Users\\micor\\AppData\\Local\\nvim-data\\site\\pack\\packer\\start\\vim-commentary",
+    path = "/home/mico/.local/share/nvim/site/pack/packer/start/vim-commentary",
     url = "https://github.com/tpope/vim-commentary"
   }
 }
