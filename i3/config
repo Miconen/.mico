@@ -1,0 +1,288 @@
+# Documentation: https://i3wm.org/docs/userguide.html
+
+# set mod
+set $mod Mod4
+
+# set font
+font pango:Open sans 11
+
+# set keyboard layout
+exec_always --no-startup-id setxkbmap fi
+
+### Runnig apps in background ###
+
+# run picom
+exec_always --no-startup-id picom &
+
+# run mpd
+exec_always --no-startup-id mpd &
+
+# run dunst
+exec_always --no-startup-id dunst &
+
+# set wallpaper with feh
+exec_always feh --no-fehbg --bg-scale $HOME/wallpapers/2B/2b-robots.jpg
+
+# launch polybar
+exec_always --no-startup-id killall -q
+exec_always --no-startup-id $HOME/.config/polybar/launch.sh
+
+# start i3 components
+exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
+exec --no-startup-id nm-applet
+
+### Shortcuts ###
+
+floating_modifier $mod
+
+# start a terminal
+bindsym $mod+Return exec alacritty
+
+# kill focused window
+bindsym $mod+Shift+q kill
+
+# change focus
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+# alternatively, you can use the cursor keys:
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+# move focused window
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+# alternatively, you can use the cursor keys:
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# split in horizontal orientation
+bindsym $mod+n split h
+
+# split in vertical orientation
+bindsym $mod+m split v
+
+# enter fullscreen mode for the focused container
+bindsym $mod+f fullscreen toggle
+
+# change container layout (stacked, tabbed, toggle split)
+bindsym $mod+q layout stacking
+bindsym $mod+w layout tabbed
+bindsym $mod+e layout toggle split
+
+# save and restore layout with i3-resurrect
+bindsym $mod+t  exec --no-startup-id i3-resurrect restore
+bindsym $mod+y  exec --no-startup-id i3-resurrect save
+
+# flashfocus
+exec_always --no-startup-id flashfocus
+
+# toggle tiling / floating
+bindsym $mod+Shift+space floating toggle
+
+# change focus between tiling / floating windows
+bindsym $mod+space focus mode_toggle
+
+# run lockscreen
+bindsym $mod+i exec lock
+
+# toggle polybar
+bindsym $mod+o exec $HOME/.config/polybar/launch.sh
+bindsym $mod+p exec killall -q polybar
+
+# move workspaces between monitors
+#bindsym $mod+b move workspace to output right
+
+# focus the parent container
+#bindsym $mod+a focus parent
+
+# focus the child container
+#bindsym $mod+d focus child
+
+# run rofi programs
+bindsym $mod+a exec "rofi -show window -no-default-config -config ~/.config/rofi/main.rasi"
+bindsym $mod+d exec "rofi -show drun -no-default-config -config ~/.config/rofi/main.rasi"
+bindsym $mod+s exec "rofi -show drun -no-default-config -config ~/.config/rofi/full_screen.rasi"
+bindsym $mod+z exec "rofi -show  -modi ':rofi-bookmarks' -no-default-config -config ~/.config/rofi/main.rasi"
+bindsym $mod+x exec "rofi-powermenu"
+bindsym $mod+c exec "rofi-screenshot"
+
+# take a screenshot
+bindsym Pause exec screenshot -sa
+bindsym Print exec screenshot -sf
+
+# audio control
+# bindsym XF86AudioRaiseVolume exec --no-startup-id amixer -D pulse sset Master 5%+ && volume &
+# bindsym XF86AudioLowerVolume exec --no-startup-id amixer -D pulse sset Master 5%- && volume &
+# bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle && mute &
+# bindsym XF86AudioMicMute exec --no-startup-id amixer -D pulse sset Master 5%+ && volume &
+# bindsym XF86AudioRaiseVolume exec --no-startup-id playerctl 
+bindsym XF86AudioMute exec --no-startup-id playerctl play-pause
+bindsym XF86AudioLowerVolume exec --no-startup-id playerctl previous
+bindsym XF86AudioRaiseVolume exec --no-startup-id playerctl next 
+
+# turn off screen
+#bindsym XF86ScreenSaver exec xset dpms force off
+
+# :)
+bindsym ctrl + F1 exec --no-startup-id alacritty
+bindsym ctrl + F2 exec --no-startup-id dmenu_run
+
+# toggle microphone 
+bindsym ctrl + F3 exec amixer set Capture nocap && dunstify -a "Microphone" "Microphone" "Microphone is muted" -r 100 -i /usr/local/bin/icons/mic-off.svg
+bindsym ctrl + F4 exec amixer set Capture cap && dunstify -a "Microphone" "Microphone" "Microphone is unmuted" -r 100 -i /usr/local/bin/icons/mic.svg
+
+# monitor names
+set $monitor1 "DP-4"
+set $monitor2 "DP-2"
+set $monitor3 "DP-0"
+
+# workspaces names
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+
+# monitor workspaces
+workspace $ws1 output $monitor1
+workspace $ws2 output $monitor2
+workspace $ws3 output $monitor3
+workspace $ws4 output $monitor3
+
+# switch to workspace
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+
+# move focused container to workspace
+bindsym $mod+Shift+1 move container to workspace number $ws1 workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2 workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3 workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4 workspace number $ws4
+
+# default workspace apps
+for_window [class="Chromium"] move container to workspace $ws1
+for_window [class="Alacritty"] move container to workspace $ws2
+for_window [class="Spotify"] move container to workspace $ws3
+for_window [class="discord"] move container to workspace $ws4
+
+# start default apps
+exec chromium
+exec alacritty
+exec spotify
+exec discord
+
+# exec --no-startup-id bash ./xrandr.sh
+
+# reload the configuration file
+bindsym $mod+Shift+c reload
+
+# restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
+bindsym $mod+Shift+r restart
+
+# exit i3 (logs you out of your X session)
+bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
+
+# resize window (you can also use the mouse for that)
+mode "resize" {
+        # These bindings trigger as soon as you enter the resize mode
+
+        # Pressing left will shrink the window’s width.
+        # Pressing right will grow the window’s width.
+        # Pressing up will shrink the window’s height.
+        # Pressing down will grow the window’s height.
+        bindsym j resize shrink width 10 px or 10 ppt
+        bindsym k resize grow height 10 px or 10 ppt
+        bindsym l resize shrink height 10 px or 10 ppt
+        bindsym semicolon resize grow width 10 px or 10 ppt
+
+        # same bindings, but for the arrow keys
+        bindsym Left resize shrink width 10 px or 10 ppt
+        bindsym Down resize grow height 10 px or 10 ppt
+        bindsym Up resize shrink height 10 px or 10 ppt
+        bindsym Right resize grow width 10 px or 10 ppt
+
+        # back to normal: Enter or Escape or $mod+r
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+        bindsym $mod+r mode "default"
+}
+
+bindsym $mod+r mode "resize"
+
+### BORDERS ###
+
+#border
+default_border pixel 2
+
+#border colors
+client.focused #343746 #343746 #F8F8F2 #343746 #343746
+client.focused_inactive #343746 #343746 #F8F8F2 #21222C #21222C
+client.unfocused #343746 #343746 #F8F8F2 #21222C #21222C
+
+### SETTINGS FOR i3 BAR ###
+
+bar {
+        mode invisible
+        tray_output none
+}
+
+### SETTINGS FOR i3-gaps ###
+
+# Set inner/outer gaps
+gaps inner 8
+gaps outer 0
+
+# Smart gaps (gaps used if only more than one container on the workspace)
+# smart_gaps on
+
+# Smart borders (draw borders around container only if it is not the only container on this workspace)
+# on|no_gaps (on=always activate and no_gaps=only activate if the gap size to the edge of the screen is 0)
+#smart_borders on
+
+# Press $mod+g to enter the gap mode. Choose o or i for modifying outer/inner gaps. Press one of + / - (in-/decrement for current workspace) or 0 (remove gaps for current workspace). If you also press Shift with these keys, the change will be global for all workspaces.
+set $mode_gaps Gaps: (o) outer, (i) inner
+set $mode_gaps_outer Outer Gaps: +|-|0 (local), Shift + +|-|0 (global)
+set $mode_gaps_inner Inner Gaps: +|-|0 (local), Shift + +|-|0 (global)
+bindsym $mod+g mode "$mode_gaps"
+
+mode "$mode_gaps" {
+        bindsym o      mode "$mode_gaps_outer"
+        bindsym i      mode "$mode_gaps_inner"
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+}
+mode "$mode_gaps_inner" {
+        bindsym plus  gaps inner current plus 5
+        bindsym minus gaps inner current minus 5
+        bindsym 0     gaps inner current set 0
+
+        bindsym Shift+plus  gaps inner all plus 5
+        bindsym Shift+minus gaps inner all minus 5
+        bindsym Shift+0     gaps inner all set 0
+
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+}
+mode "$mode_gaps_outer" {
+        bindsym plus  gaps outer current plus 5
+        bindsym minus gaps outer current minus 5
+        bindsym 0     gaps outer current set 0
+
+        bindsym Shift+plus  gaps outer all plus 5
+        bindsym Shift+minus gaps outer all minus 5
+        bindsym Shift+0     gaps outer all set 0
+
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+}
