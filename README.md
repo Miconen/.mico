@@ -6,20 +6,15 @@ git clone https://github.com/Miconen/.mico.git ~/.config/
 
 ## Stuff:
 
-### Font:
-
--   Font is Classic Console Neue
--   Alternative font Perfect DOS VGA 437 Win
-
 ### Theme:
 
-Themes for everything possible is Gruvbox Dark
+Themes for everything possible is ~~Gruvbox Dark~~ blue and transparent... <sub>Tokyonight</sub>
 
 ## Todo:
 
--   Clean up default "boilerplate" comments from some config files
 -   Add git config
 -   Add script that adds symlinks to proper folders
+-   Add install script for preferred folder locations etc
 
 ## Nvim Bindings
 
@@ -50,6 +45,7 @@ Themes for everything possible is Gruvbox Dark
 | coc       | \<leader\>l  | Execute code autofix           |
 | coc       | \<leader\>rn | Rename symbol                  |
 | coc       | gd           | Go to definition               |
+| coc       | ge           | Go to next error               |
 | Telescope | \<C-B\>      | Open buffer picker             |
 | Telescope | \<C-F\>      | Open project search            |
 | Telescope | \<C-P\>      | Open file picker               |
