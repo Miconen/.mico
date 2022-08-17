@@ -1,6 +1,7 @@
+# https://github.com/marlonrichert/zsh-autocomplete.git
+source ~/Repos/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 ZSH="/usr/share/oh-my-zsh/"
 export ZSH="/usr/share/oh-my-zsh/"
-ZSH_THEME=""
 plugins=(git)
 
 # Zoxide
@@ -22,11 +23,22 @@ alias files.="nemo ."
 
 alias c="clear"
 
-# Dotfiles
+# Filepaths
 alias .zshrc="nvim ~/.zshrc"
 alias .vimrc="nvim ~/.config/nvim/init.lua"
+alias .coc="nvim ~/.config/coc/coc-settings.json"
 alias .i3="nvim ~/.config/i3/config"
+alias shared="cd /mnt/shared"
+alias documents="cd /mnt/shared/documents"
+alias pictures="cd /mnt/shared/pictures"
+alias images="cd /mnt/shared/pictures"
+alias videos="cd /mnt/shared/pictures"
+alias music="cd /mnt/shared/pictures"
+alias windows="cd /mnt/shared/windows"
+alias linux="cd /mnt/shared/linux"
+alias downloads="cd /mnt/shared/linux/Downloads"
 
+ZSH_THEME=""
 fpath+=$HOME/.local/share/oh-my-zsh/themes/typewritten
 autoload -U promptinit; promptinit
 prompt typewritten
