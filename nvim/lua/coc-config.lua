@@ -10,8 +10,7 @@ vim.api.nvim_set_keymap("n", "K", ":call CocActionAsync('doHover')<CR>", {silent
 
 -- Errors
 vim.api.nvim_set_keymap("n", "<leader>l", ":CocCommand eslint.executeAutofix<CR>", {})
-vim.api.nvim_set_keymap("n", "<C-j>", "<Plug>(coc-diagnostic-next)", {})
-vim.api.nvim_set_keymap("n", "<C-k>", "<Plug>(coc-diagnostic-prev)", {})
+vim.api.nvim_set_keymap("n", "ge", "<Plug>(coc-diagnostic-next)", {})
 
 -- Autocomplete menu keybinds
 vim.api.nvim_set_keymap("i", "<TAB>", "coc#pum#visible() ? '<C-n>' : '<TAB>'", {noremap = true, silent = true, expr = true})
