@@ -1,0 +1,40 @@
+{
+    "tsserver.enable": true,
+
+    "eslint.enable": true,
+    "eslint.filetypes": [
+        "javascript",
+        "typescript",
+        "typescriptreact",
+        "javascriptreact",
+        "typescript.tsx"
+    ],
+
+    "coc.preferences.formatOnSaveFiletypes": [
+        "css",
+        "html",
+        "Markdown",
+        "javascript",
+        "typescript",
+        "typescriptreact",
+        "json",
+        "javascriptreact",
+        "typescript.tsx"
+    ],
+
+    "diagnostic.errorSign": "✘",
+    "diagnostic.warningSign": "⚠",
+    "diagnostic.infoSign": "i",
+    "diagnostic.hintSign": "➤",
+
+    "html.enable": true,
+    "html.format.enable": true,
+    "html.filetypes": ["html", "astro"],
+
+    "css.enable": true,
+
+    "prettier.useTabs": false,
+    "prettier.tabWidth": 4,
+    "prettier.trailingComma": true,
+    "prettier.embeddedLanguageFormatting": true
+}
