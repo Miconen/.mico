@@ -37,6 +37,8 @@ alias music="cd /mnt/shared/pictures"
 alias windows="cd /mnt/shared/windows"
 alias linux="cd /mnt/shared/linux"
 alias downloads="cd /mnt/shared/linux/Downloads"
+alias fixscreens="bash ~/.config/.mico/arch/xrandr.sh"
+alias addssh="bash ~/.config/.mico/arch/git-ssh-agent.sh"
 
 ZSH_THEME=""
 fpath+=$HOME/.local/share/oh-my-zsh/themes/typewritten
