@@ -2,6 +2,8 @@
 source ~/Repos/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 ZSH="/usr/share/oh-my-zsh/"
 export ZSH="/usr/share/oh-my-zsh/"
+EDITOR=$EDITOR
+export EDITOR=$EDITOR
 plugins=(git)
 
 # Zoxide
@@ -24,10 +26,10 @@ alias files.="nemo ."
 alias c="clear"
 
 # Filepaths
-alias .zshrc="nvim ~/.zshrc"
-alias .vimrc="nvim ~/.config/nvim/init.lua"
-alias .coc="nvim ~/.config/coc/coc-settings.json"
-alias .i3="nvim ~/.config/i3/config"
+alias .zshrc="$EDITOR ~/.zshrc"
+alias .vimrc="$EDITOR ~/.config/nvim/init.lua"
+alias .coc="$EDITOR ~/.config/coc/coc-settings.json"
+alias .i3="$EDITOR ~/.config/i3/config"
 alias shared="cd /mnt/shared"
 alias documents="cd /mnt/shared/documents"
 alias pictures="cd /mnt/shared/pictures"
