@@ -18,7 +18,7 @@ git clone https://github.com/Miconen/nvim-config.git "$env:LOCALAPPDATA\nvim\"
 ```
 :PackerSync
 ```
-Optionally install LSP server for the languages of your choice.
+If PackerSync is not recognized as a command and are sure you have Packer installed. Comment out everything before `return require('packer')` and try again. After which you can uncomment and run PackerSync again.
 
 ### Bindings
 
