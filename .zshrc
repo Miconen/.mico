@@ -1,20 +1,18 @@
 # https://github.com/marlonrichert/zsh-autocomplete.git
 source ~/Repos/zsh-autocomplete/zsh-autocomplete.plugin.zsh
-ZSH="/usr/share/oh-my-zsh/"
-export ZSH="/usr/share/oh-my-zsh/"
 EDITOR=$EDITOR
 export EDITOR=$EDITOR
 plugins=(git)
 
+# Prompt
+autoload -Uz vcs_info
+precmd() { vcs_info }
+zstyle ':vcs_info:git:*' formats '%b '
+setopt PROMPT_SUBST
+PROMPT='%F{white}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
+
 # Zoxide
 eval "$(zoxide init zsh)"
-
-#ZSH_CACHE_DIR="$HOME/.cache/oh-my-zsh"
-#if [[ ! -d "$ZSH_CACHE_DIR" ]]; then
-  #mkdir "$ZSH_CACHE_DIR"
-#fi
-
-#source "$ZSH"/oh-my-zsh.sh
 
 alias yeet="yay -Rn"
 alias yeeet="yay -Rns"
@@ -41,8 +39,3 @@ alias linux="cd /mnt/shared/linux"
 alias downloads="cd /mnt/shared/linux/Downloads"
 alias fixscreens="bash ~/.config/.mico/arch/xrandr.sh"
 alias addssh="bash ~/.config/.mico/arch/git-ssh-agent.sh"
-
-ZSH_THEME=""
-fpath+=$HOME/.local/share/oh-my-zsh/themes/typewritten
-autoload -U promptinit; promptinit
-prompt typewritten
