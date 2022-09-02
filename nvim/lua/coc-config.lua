@@ -13,8 +13,9 @@ vim.api.nvim_set_keymap("n", "<leader>l", ":CocCommand eslint.executeAutofix<CR>
 vim.api.nvim_set_keymap("n", "ge", "<Plug>(coc-diagnostic-next)", {})
 
 -- Autocomplete menu keybinds
-vim.api.nvim_set_keymap("i", "<TAB>", "coc#pum#visible() ? '<C-n>' : '<TAB>'", {noremap = true, silent = true, expr = true})
-vim.api.nvim_set_keymap("i", "<S-TAB>", "coc#pum#visible() ? '<C-p>' : '<C-h>'", {noremap = true, expr = true})
+vim.api.nvim_set_keymap("i", "<TAB>", "coc#pum#visible() ? coc#pum#next(1) : '<TAB>'", {noremap = true, silent = true, expr = true})
+vim.api.nvim_set_keymap("i", "<S-TAB>", "coc#pum#visible() ? coc#pum#prev(1) : '<S-TAB>'", {noremap = true, expr = true})
+
 vim.api.nvim_set_keymap("i", "<CR>", "coc#pum#visible() ? coc#_select_confirm() : '<C-G>u<CR><C-R>=coc#on_enter()<CR>'", {silent = true, expr = true, noremap = true})
 
 vim.o.hidden = true
