@@ -21,11 +21,28 @@ vim.o.hidden = true
 vim.o.backup = false
 vim.o.writebackup = false
 vim.o.updatetime = 300
-vim.g.coc_global_extenstions = {
+vim.g.coc_global_extensions = {
+    -- Web dev
+    "coc-html",
+    "coc-htmlhint",
+    "coc-emmet",
+    "coc-css",
+    "coc-html-css-support",
+    -- JS / TS
     "coc-eslint",
     "coc-tslint",
     "coc-tsserver",
     "coc-json",
+    -- Languages / Filetypes
+    "coc-lua",
+    "coc-sh",
+    "coc-yaml",
+    -- Productivity / Coding / Debug
+    "coc-diagnostic",
     "coc-pairs",
     "coc-prettier",
+    -- Misc
+    "coc-git",
+    "coc-docker",
+    "coc-calc",
 }
