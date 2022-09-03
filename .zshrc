@@ -1,1 +1,1 @@
-source ~/.config/.mico/zsh/global.sh
+source ~/.config/.mico/zsh/zshrc.sh

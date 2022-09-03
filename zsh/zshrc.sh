@@ -1,12 +1,13 @@
+# Global settings file
 source ~/.config/.mico/zsh/global.sh
 
 case `uname` in
     # Linux settings file
-    Linux)
+    Linux )
         source ~/.config/.mico/zsh/linux.sh
     ;;
     # MacOS settigs file
-    Darwin)
+    Darwin )
         source ~/.config/.mico/zsh/macos.sh
     ;;
 esac

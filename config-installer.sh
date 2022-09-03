@@ -1,8 +1,9 @@
 #!/bin/bash
 # Created by Mico 2022
 
-LOCATION_DOTFILES="$HOME/.config/.mico"
-LOCATION_CONFIGS="$HOME/.config/"
+LOCATION_CONFIGS="$HOME/.config"
+LOCATION_DOTFILES="$LOCATION_CONFIGS/.mico"
+LOCATION_BACKUP="$LOCATION_DOTFILES/backup"
 
 LOCATION_NVIM="$HOME/.config/nvim"
 STRING_NVIM="nvim"
@@ -18,8 +19,6 @@ STRING_POLYBAR="polybar"
 
 LOCATION_I3="$HOME/.config/i3"
 STRING_I3="i3"
-
-LOCATION_BACKUP="$LOCATION_DOTFILES/backup"
 
 clear
 
@@ -75,7 +74,7 @@ clear
 if [[ "$BACKUP" == "$POSITIVE" ]]
 then
     THIS_BACKUP="$LOCATION_BACKUP/$(date +%Y-%m-%d-%s)"
-    mkdir -p "$THIS_BACKUP"
+    mkdir -p $THIS_BACKUP
     echo -e "Backing up selected configurations"
 
     if [[ "$CONFIGS" == *"$STRING_NVIM"* ]]
