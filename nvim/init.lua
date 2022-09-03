@@ -25,7 +25,6 @@ return require('packer').startup(function()
         'neoclide/coc.nvim',
         branch = 'release'
     }
-    use 'ellisonleao/gruvbox.nvim'
     use 'folke/tokyonight.nvim'
     use 'nvim-treesitter/nvim-treesitter'
     use 'nvim-treesitter/nvim-treesitter-context'

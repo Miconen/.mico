@@ -1,7 +1,5 @@
 {
-    "tsserver.enable": true,
-
-    "eslint.enable": true,
+    "eslint.autoFixOnSave": true,
 
     "coc.preferences.formatOnSaveFiletypes": [
         "css",
@@ -14,20 +12,16 @@
         "javascriptreact",
         "typescript.tsx"
     ],
-
     "diagnostic.errorSign": "✘",
     "diagnostic.warningSign": "⚠",
     "diagnostic.infoSign": "i",
     "diagnostic.hintSign": "➤",
 
-    "html.enable": true,
     "html.format.enable": true,
     "html.filetypes": ["html", "astro"],
 
-    "css.enable": true,
-
     "prettier.useTabs": false,
     "prettier.tabWidth": 4,
-    "prettier.trailingComma": true,
-    "prettier.embeddedLanguageFormatting": true
+    "prettier.trailingComma": "all",
+    "prettier.embeddedLanguageFormatting": "auto"
 }
