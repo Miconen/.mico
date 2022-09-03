@@ -2,7 +2,7 @@
 
 ## Usage
 
-Source the zshrc.sh file in this folder inside your actual .zshrc
+Source the zshrc.sh file in this folder inside your actual .zshrc or use the config-installer.sh script.
 
 ```zsh
 source ~/.config/.mico/zsh/zshrc.sh
