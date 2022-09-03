@@ -39,3 +39,4 @@ alias linux="cd /mnt/shared/linux"
 alias downloads="cd /mnt/shared/linux/Downloads"
 alias fixscreens="bash ~/.config/.mico/arch/xrandr.sh"
 alias addssh="bash ~/.config/.mico/arch/git-ssh-agent.sh"
+alias :q=exit
