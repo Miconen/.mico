@@ -5,19 +5,19 @@ LOCATION_CONFIGS="$HOME/.config"
 LOCATION_DOTFILES="$LOCATION_CONFIGS/.mico"
 LOCATION_BACKUP="$LOCATION_DOTFILES/backup"
 
-LOCATION_NVIM="$HOME/.config/nvim"
+LOCATION_NVIM="$LOCATION_CONFIGS/nvim"
 STRING_NVIM="nvim"
 
 LOCATION_ZSHRC="$HOME/.zshrc"
 STRING_ZSHRC="zshrc"
 
-LOCATION_ALACRITTY="$HOME/.config/alacritty"
+LOCATION_ALACRITTY="$LOCATION_CONFIGS/alacritty"
 STRING_ALACRITTY="alacritty"
 
-LOCATION_POLYBAR="$HOME/.config/polybar"
+LOCATION_POLYBAR="$LOCATION_CONFIGS/polybar"
 STRING_POLYBAR="polybar"
 
-LOCATION_I3="$HOME/.config/i3"
+LOCATION_I3="$LOCATION_CONFIGS/i3"
 STRING_I3="i3"
 
 clear
@@ -97,7 +97,7 @@ then
     fi
     if [[ "$CONFIGS" == *"$STRING_I3"* ]]
     then
-        echo -e "\033[32mBacking up I3\033[0m"
+        echo -e "\033[32mBacking up i3\033[0m"
         mkdir "$THIS_BACKUP/i3"
         cp -r "$LOCATION_I3" "$THIS_BACKUP/i3"
     fi
@@ -134,7 +134,7 @@ then
 fi
 if [[ "$CONFIGS" == *"$STRING_I3"* ]]
 then
-    echo -e "\033[33mRemoving I3\033[0m"
+    echo -e "\033[33mRemoving i3\033[0m"
     rm -rf "$LOCATION_I3"
     echo -e "\033[32mCopying new i3\033[0m"
     cp -r "$LOCATION_DOTFILES/i3" "$LOCATION_CONFIGS"
