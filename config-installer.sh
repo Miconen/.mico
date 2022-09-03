@@ -116,33 +116,38 @@ then
     echo -e "\033[33mRemoving nvim\033[0m"
     rm -rf "$LOCATION_NVIM"
     echo -e "\033[32mCopying new nvim\033[0m"
-    cp -r "$LOCATION_DOTFILES/nvim" "$LOCATION_CONFIGS"
+    ln -s "$LOCATION_DOTFILES/nvim" "$LOCATION_NVIM"
+    # cp -r "$LOCATION_DOTFILES/nvim" "$LOCATION_CONFIGS"
 fi
 if [[ "$CONFIGS" == *"$STRING_ZSHRC"* ]]
 then
     echo -e "\033[33mRemoving zshrc\033[0m"
     rm "$LOCATION_ZSHRC"
     echo -e "\033[32mCopying new zshrc\033[0m"
-    cp "$LOCATION_DOTFILES/.zshrc" "$HOME"
+    ln -s "$LOCATION_DOTFILES/.zshrc" "$LOCATION_ZSHRC"
+    # cp "$LOCATION_DOTFILES/.zshrc" "$HOME"
 fi
 if [[ "$CONFIGS" == *"$STRING_ALACRITTY"* ]]
 then
     echo -e "\033[33mRemoving alacritty\033[0m"
     rm -rf "$LOCATION_ALACRITTY"
     echo -e "\033[32mCopying new alacritty\033[0m"
-    cp -r "$LOCATION_DOTFILES/alacritty" "$LOCATION_CONFIGS"
+    ln -s "$LOCATION_DOTFILES/alacritty" "$LOCATION_ALACRITTY"
+    # cp -r "$LOCATION_DOTFILES/alacritty" "$LOCATION_CONFIGS"
 fi
 if [[ "$CONFIGS" == *"$STRING_I3"* ]]
 then
     echo -e "\033[33mRemoving i3\033[0m"
     rm -rf "$LOCATION_I3"
     echo -e "\033[32mCopying new i3\033[0m"
-    cp -r "$LOCATION_DOTFILES/i3" "$LOCATION_CONFIGS"
+    ln -s "$LOCATION_DOTFILES/i3" "$LOCATION_I3"
+    # cp -r "$LOCATION_DOTFILES/i3" "$LOCATION_CONFIGS"
 fi
 if [[ "$CONFIGS" == *"$STRING_POLYBAR"* ]]
 then
     echo -e "\033[33mRemoving polybar\033[0m"
     rm -rf "$LOCATION_POLYBAR"
     echo -e "\033[32mCopying new polybar\033[0m"
-    cp -r "$LOCATION_DOTFILES/polybar" "$LOCATION_CONFIGS"
+    ln -s "$LOCATION_DOTFILES/polybar" "$LOCATION_CONFIGS"
+    # cp -r "$LOCATION_DOTFILES/polybar" "$LOCATION_CONFIGS"
 fi
