@@ -12,6 +12,4 @@ Themes for everything possible is ~~Gruvbox Dark~~ blue and transparent... <sub>
 
 ## Todo:
 
-- Add git config
-- Add script that adds symlinks to proper folders
-- Add install script for preferred folder locations etc
+-   Start using a dotfile manager when maintaining the install script becomes too much...
