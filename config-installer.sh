@@ -15,6 +15,7 @@ LOCATION_ALACRITTY="$LOCATION_CONFIGS/alacritty"
 STRING_ALACRITTY="alacritty"
 
 LOCATION_POLYBAR="$LOCATION_CONFIGS/polybar"
+LOCATION_NTFD="$LOCATION_CONFIGS/ntfd"
 STRING_POLYBAR="polybar"
 
 LOCATION_I3="$LOCATION_CONFIGS/i3"
@@ -106,6 +107,8 @@ then
         echo -e "\033[32mBacking up polybar\033[0m"
         mkdir "$THIS_BACKUP/polybar"
         cp -r "$LOCATION_POLYBAR" "$THIS_BACKUP/polybar"
+        mkdir "$THIS_BACKUP/ntfd"
+        cp -r "$LOCATION_NTFD" "$THIS_BACKUP/ntfd"
     fi
 fi
 
@@ -147,7 +150,12 @@ if [[ "$CONFIGS" == *"$STRING_POLYBAR"* ]]
 then
     echo -e "\033[33mRemoving polybar\033[0m"
     rm -rf "$LOCATION_POLYBAR"
+    echo -e "\033[33mRemoving nftd\033[0m"
+    rm -rf "$LOCATION_NTFD"
+
     echo -e "\033[32mCopying new polybar\033[0m"
     ln -s "$LOCATION_DOTFILES/polybar" "$LOCATION_CONFIGS"
     # cp -r "$LOCATION_DOTFILES/polybar" "$LOCATION_CONFIGS"
+    echo -e "\033[32mCopying new ntfd\033[0m"
+    ln -s "$LOCATION_DOTFILES/ntfd" "$LOCATION_CONFIGS"
 fi

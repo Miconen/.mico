@@ -31,6 +31,9 @@ exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
 exec --no-startup-id nm-applet
 
+# Start ntfd weather service
+exec --no-startup-id ntfd &
+
 ### Shortcuts ###
 
 floating_modifier $mod
