@@ -59,10 +59,10 @@ display = " {{ unread_count }}"
 # MPD configuration
 [mpd]
 # Enable / disable mpd integration
-enabled = true
+enabled = false
 # Top level directory containing your MPD collection
 # Should be the same value as "music_directory" from your mpd.conf
-music_directory = "/mnt/media/music"
+music_directory = "/home/Mico/Music"
 # How long MPD notifications should stay up (in seconds)
 notification_timeout = 10
 # Cover art files should have standardized names and formats within your collection
