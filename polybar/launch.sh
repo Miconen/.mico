@@ -1,6 +1,15 @@
 #!/bin/bash
 
 # Terminate already running bar instances
+killall -q ntfd
+# Wait until the processes have been shut down
+while pgrep -u $UID -x ntfd >/dev/null; do sleep 1; done
+
+ntfd &
+
+echo "NTFD launched..."
+
+# Terminate already running bar instances
 killall -q polybar
 
 # Wait until the processes have been shut down
