@@ -1,6 +1,8 @@
 # Path
 EDITOR=/usr/bin/nvim
 export EDITOR=$EDITOR
+SHARED=/mnt/shared
+export SHARED=$SHARED
 
 # Aliases
 # Configs
@@ -23,5 +25,5 @@ alias addssh="bash ~/.config/.mico/arch/git-ssh-agent.sh"
 alias yeet="yay -Rn"
 alias yeeet="yay -Rns"
 alias yeet_useless="yay -Rns $(yay -Qtdq)"
-alias files="nemo"
-alias files.="nemo ."
+alias files="ranger"
+alias files.="ranger ."
