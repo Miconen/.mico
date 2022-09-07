@@ -1,4 +1,11 @@
 {
+    "diagnostic.checkCurrentLine": true,
+    "diagnostic.messageTarget": "float",
+
+    "suggest.virtualText": true,
+    "diagnostic.virtualText": true,
+    "diagnostic.virtualTextCurrentLineOnly": false,
+
     "eslint.autoFixOnSave": true,
 
     "languageserver": {
