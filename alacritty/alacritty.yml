@@ -4,7 +4,7 @@ window:
 font:
   size: 16 
   normal:
-    family: Roboto mono
+    family: MesloLGL Nerd Font
     # style:  medium
 
 colors:
