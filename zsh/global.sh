@@ -17,6 +17,7 @@ PROMPT='%F{white}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
 alias .zshrc="$EDITOR ~/.config/.mico/zsh/zshrc.sh"
 alias .vimrc="$EDITOR ~/.config/nvim/init.lua"
 alias .coc="$EDITOR ~/.config/nvim/coc-settings.json"
+alias nvimdiff='nvim -d'
 
 # Utility
 alias :q=exit
