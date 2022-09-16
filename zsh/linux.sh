@@ -10,14 +10,14 @@ alias .i3="$EDITOR ~/.config/i3/config"
 
 # Filepaths
 alias shared="cd /mnt/shared"
-alias documents="cd /mnt/shared/documents"
-alias pictures="cd /mnt/shared/pictures"
-alias images="cd /mnt/shared/pictures"
-alias videos="cd /mnt/shared/pictures"
-alias music="cd /mnt/shared/pictures"
-alias windows="cd /mnt/shared/windows"
-alias linux="cd /mnt/shared/linux"
-alias downloads="cd /mnt/shared/linux/Downloads"
+alias documents="cd /mnt/shared/Documents"
+alias pictures="cd /mnt/shared/Pictures"
+alias images="cd /mnt/shared/Pictures"
+alias videos="cd /mnt/shared/Pictures"
+alias music="cd mnt/shared/Pictures"
+alias windows="cd /mnt/shared/Windows"
+alias linux="cd /mnt/shared/Linux"
+alias downloads="cd /mnt/shared/Linux/Downloads"
 
 # Utility
 alias fixscreens="bash ~/.config/.mico/arch/xrandr.sh"
