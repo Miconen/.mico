@@ -8,9 +8,6 @@
 
     "eslint.autoFixOnSave": true,
 
-    "diagnostic.virtualText": true,
-    "diagnostic.virtualTextCurrentLineOnly": false,
-
     "languageserver": {
         "csharp-ls": {
             "command": "csharp-ls",
