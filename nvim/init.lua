@@ -47,5 +47,4 @@ return require('packer').startup(function()
         requires = { 'kyazdani42/nvim-web-devicons', opt = true }
     }
     use 'wikitopian/hardmode'
-    use 'ionide/Ionide-vim'
 end)
