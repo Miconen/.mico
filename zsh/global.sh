@@ -2,6 +2,9 @@
 # Plugins
 source ~/Repos/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 
+# Path
+export PATH="$HOME/.dotnet/tools/:$PATH"
+
 # Zoxide
 eval "$(zoxide init zsh)"
 
