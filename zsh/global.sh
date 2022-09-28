@@ -1,6 +1,7 @@
 # Global settings file
 # Plugins
 source ~/Repos/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+zstyle ':completion:*'  list-colors '=*=96'
 
 # Path
 export PATH="$HOME/.dotnet/tools/:$PATH"
