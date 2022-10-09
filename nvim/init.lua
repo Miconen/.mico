@@ -5,9 +5,9 @@ require('coc-config')
 require('lualine').setup()
 
 require'nvim-treesitter.configs'.setup {
-        ensure_installed = "all",
-        ignore_install = { "phpdoc" },
-        context_commentstring = {
+    ensure_installed = "all",
+    ignore_install = { "phpdoc" },
+    context_commentstring = {
         enable = true
     },
     highlight = {
@@ -31,6 +31,8 @@ return require('packer').startup(function()
     use 'tpope/vim-commentary'
     use 'JoosepAlviste/nvim-ts-context-commentstring'
     use 'lukas-reineke/indent-blankline.nvim'
+    use 'lewis6991/gitsigns.nvim'
+    use 'petertriho/nvim-scrollbar'
     use {
         'nvim-telescope/telescope.nvim',
         requires = { {'nvim-lua/plenary.nvim'} }
@@ -46,5 +48,4 @@ return require('packer').startup(function()
         'nvim-lualine/lualine.nvim',
         requires = { 'kyazdani42/nvim-web-devicons', opt = true }
     }
-    use 'wikitopian/hardmode'
 end)
