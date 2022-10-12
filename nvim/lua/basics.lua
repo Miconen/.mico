@@ -15,10 +15,9 @@ vim.o.scrolloff = 10
 vim.o.errorbells = false
 vim.o.shiftwidth = 4
 vim.o.numberwidth = 4
--- vim.o.colorcolumn = '80'
 vim.o.showmode = false
 vim.o.showtabline = 2
-vim.o.signcolumn = 'no'
+vim.o.signcolumn = 'yes'
 vim.o.mouse = 'a'
 
 vim.api.nvim_set_keymap('n', 'vs', ':vs<CR>', { noremap = true })

@@ -43,7 +43,6 @@ vim.g.coc_global_extensions = {
     "coc-pairs",
     "coc-prettier",
     -- Misc
-    "coc-git",
     "coc-docker",
     "coc-calc",
 }
