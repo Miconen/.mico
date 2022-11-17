@@ -1,18 +1,21 @@
 local telescope = require("telescope")
 
-telescope.setup{
-  pickers = {
-    find_files = {
-      theme = "dropdown",
-      previewer = false,
+telescope.setup {
+    pickers = {
+        find_files = {
+              theme = "dropdown",
+              previewer = false,
+        }
+    },
+    extensions = {
+        file_browser = {
+              theme = "dropdown",
+              previewer = false,
+        }
+    },
+    defaults = {
+        file_ignore_patterns = { "node_modules" },
     }
-  },
-  extensions = {
-    file_browser = {
-      theme = "dropdown",
-      previewer = false,
-    }
-  }
 }
 
 require("telescope").load_extension "file_browser"
