@@ -4,10 +4,14 @@ window:
     x: 0
     y: 0
 
+alt_send_esc: false
+key_bindings:
+  - { key: Space, mods: Control, chars: "\x00" }
+
 font:
   size: 16 
   normal:
-    family: Roboto mono
+    family: MesloLGL Nerd Font Mono
     # style:  medium
 
 colors:
