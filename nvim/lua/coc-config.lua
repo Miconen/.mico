@@ -31,7 +31,6 @@ vim.g.coc_global_extensions = {
     "coc-html-css-support",
     -- JS / TS
     "coc-eslint",
-    "coc-tslint",
     "coc-tsserver",
     "coc-json",
     -- Languages / Filetypes
