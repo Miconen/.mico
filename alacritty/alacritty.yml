@@ -9,10 +9,10 @@ key_bindings:
   - { key: Space, mods: Control, chars: "\x00" }
 
 font:
-  size: 16 
+  size: 18
   normal:
-    family: MesloLGL Nerd Font Mono
-    # style:  medium
+    # https://github.com/shaunsingh/SFMono-Nerd-Font-Ligaturized/blob/main/LigaSFMonoNerdFont-Regular.otf
+    family: Liga SFMono Nerd Font
 
 colors:
 
