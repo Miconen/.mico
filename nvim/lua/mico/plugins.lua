@@ -59,7 +59,6 @@ require("packer").startup(function()
     }
 
     -- Misc
-    use 'rcarriga/nvim-notify'
     use "JoosepAlviste/nvim-ts-context-commentstring"
     use "kylechui/nvim-surround"
     use "christoomey/vim-tmux-navigator"
