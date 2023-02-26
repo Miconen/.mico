@@ -22,24 +22,26 @@ vim.o.mouse = 'a'
 
 vim.notify = require("notify")
 
-vim.api.nvim_set_keymap('n', 'vs', ':vs<CR>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'sp', ':sp<CR>', { noremap = true })
-vim.api.nvim_set_keymap('n', '<C-L>', '<C-W><C-L>', { noremap = true })
-vim.api.nvim_set_keymap('n', '<C-H>', '<C-W><C-H>', { noremap = true })
-vim.api.nvim_set_keymap('n', '<C-K>', '<C-W><C-K>', { noremap = true })
-vim.api.nvim_set_keymap('n', '<C-J>', '<C-W><C-J>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'tn', ':tabnew<CR>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'tk', ':tabnext<CR>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'tj', ':tabprev<CR>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'to', ':tabo<CR>', { noremap = true })
-vim.api.nvim_set_keymap('n', '<C-S>', ':%s/', { noremap = true })
-vim.api.nvim_set_keymap("n", "<leader>t", ":sp<CR> :term<CR> :resize 15N<CR> :setlocal nonumber norelativenumber<CR> i", {noremap = true, silent = true})
-vim.api.nvim_set_keymap("t", "<Esc>", "<C-\\><C-n>", {noremap = true, silent = true})
--- vim.api.nvim_set_keymap('n', '<C-N>', ":Lexplore<CR> :vertical resize 30<CR>", { noremap = true })
-
--- vim.g["netrw_banner"] = 0
--- vim.g["netrw_liststyle"] = 3
--- vim.g["netrw_winsize"] = 25
+local opts = { noremap = true, silent = true }
+vim.keymap.set('i', '<NL>', '<C-o>o', opts) -- <NL> is basically <C-CR>
+vim.keymap.set('n', 'vs', ':vs<CR>', opts)
+vim.keymap.set('n', 'sp', ':sp<CR>', opts)
+vim.keymap.set('n', '<C-L>', '<C-W><C-L>', opts)
+vim.keymap.set('n', '<C-H>', '<C-W><C-H>', opts)
+vim.keymap.set('n', '<C-K>', '<C-W><C-K>', opts)
+vim.keymap.set('n', '<C-J>', '<C-W><C-J>', opts)
+vim.keymap.set('n', 'tn', ':tabnew<CR>', opts)
+vim.keymap.set('n', 'tk', ':tabnext<CR>', opts)
+vim.keymap.set('n', 'tj', ':tabprev<CR>', opts)
+vim.keymap.set('n', 'to', ':tabo<CR>', opts)
+vim.keymap.set('n', '<C-S>', ':%s/', opts)
+vim.keymap.set("n", "<leader>t", ":sp<CR> :term<CR> :resize 15N<CR> :setlocal nonumber norelativenumber<CR> i", opts)
+vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", opts)
+-- Set block level indenting to tab & shift-tab, also retain selection after motion
+vim.keymap.set('v', '>', '>gv', opts)
+vim.keymap.set('v', '<', '<gv', opts)
+-- Set shared clipboard between os and nvim
+vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
 
 vim.cmd([[
   augroup WindowManagement
@@ -52,10 +54,3 @@ vim.cmd([[
     highlight SignColumn guibg=Normal:ActiveWindow,NormalNC:InactiveWindow
   endfunction
 ]])
-
--- Set block level indenting to tab & shift-tab, also retain selection after motion
-vim.api.nvim_set_keymap('v', '>', '>gv', { noremap = true })
-vim.api.nvim_set_keymap('v', '<', '<gv', { noremap = true })
-
--- Set shared clipboard between os and nvim
-vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
