@@ -32,7 +32,7 @@ require("packer").startup(function()
     use "folke/tokyonight.nvim"
 
     -- Treesitter
-    use "nvim-treesitter/nvim-treesitter"
+    use { "nvim-treesitter/nvim-treesitter", { run = ':TSUpdate' } }
     use "nvim-treesitter/nvim-treesitter-context"
 
     -- Telescope
@@ -63,10 +63,10 @@ require("packer").startup(function()
         requires = { "kyazdani42/nvim-web-devicons", opt = true }
     }
     use "christoomey/vim-tmux-navigator"
+    use "ur4ltz/surround.nvim"
     use {
-        "ur4ltz/surround.nvim",
-        config = function()
-            require "surround".setup { mappings_style = "surround" }
-        end
+        "windwp/nvim-autopairs",
+        config = function() require("nvim-autopairs").setup {} end
     }
+    use "kylechui/nvim-surround"
 end)
