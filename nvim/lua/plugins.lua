@@ -38,11 +38,21 @@ require("packer").startup(function()
     -- Telescope
     use {
         "nvim-telescope/telescope.nvim",
-        requires = { {"nvim-lua/plenary.nvim"} }
+        requires = { { "nvim-lua/plenary.nvim" } }
     }
     use "nvim-telescope/telescope-file-browser.nvim"
 
+    -- nvim-tree
+    use {
+        'nvim-tree/nvim-tree.lua',
+        requires = {
+            'nvim-tree/nvim-web-devicons', -- optional, for file icons
+        },
+        tag = 'nightly' -- optional, updated every week. (see issue #1193)
+    }
+
     -- Misc
+    use 'rcarriga/nvim-notify'
     use "tpope/vim-commentary"
     use "JoosepAlviste/nvim-ts-context-commentstring"
     use "lukas-reineke/indent-blankline.nvim"
@@ -56,7 +66,7 @@ require("packer").startup(function()
     use {
         "ur4ltz/surround.nvim",
         config = function()
-        require"surround".setup {mappings_style = "surround"}
+            require "surround".setup { mappings_style = "surround" }
         end
     }
 end)

@@ -14,13 +14,15 @@ telescope.setup {
         }
     },
     defaults = {
-        file_ignore_patterns = { "node_modules" },
+        file_ignore_patterns = { "node_modules", "dist", "build", "bin", "obj" },
     }
 }
 
 require("telescope").load_extension "file_browser"
 
-vim.api.nvim_set_keymap('n', '<C-P>', "<cmd>lua require('telescope.builtin').find_files()<CR>", { noremap = true })
-vim.api.nvim_set_keymap('n', '<C-N>', ":Telescope file_browser<CR>", { noremap = true })
-vim.api.nvim_set_keymap('n', '<C-F>', "<cmd>lua require('telescope.builtin').live_grep()<CR>", { noremap = true })
-vim.api.nvim_set_keymap('n', '<C-B>', "<cmd>lua require('telescope.builtin').buffers()<CR>", { noremap = true })
+local opts = { noremap = true }
+vim.api.nvim_set_keymap('n', '<C-P>', "<cmd>lua require('telescope.builtin').find_files()<CR>", opts)
+vim.api.nvim_set_keymap('n', '<C-N>', ":Telescope file_browser<CR>", opts)
+vim.api.nvim_set_keymap('n', '<C-F>', "<cmd>lua require('telescope.builtin').live_grep()<CR>", opts)
+vim.api.nvim_set_keymap('n', '<C-B>', "<cmd>lua require('telescope.builtin').buffers()<CR>", opts)
+vim.api.nvim_set_keymap('n', '<C-L>', "<cmd>lua require('telescope.builtin').oldfiles()<CR>", opts)

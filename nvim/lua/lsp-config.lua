@@ -12,6 +12,9 @@ local lsps = {
     [6] = "html",
     [7] = "cssls",
     [8] = "emmet_ls",
+    -- Docker
+    [9] = "dockerls",
+    [10] = "docker_compose_language_service",
 }
 
 -- Mason setup
