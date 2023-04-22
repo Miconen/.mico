@@ -36,6 +36,8 @@ vim.keymap.set('v', '<', '<gv', opts)
 vim.keymap.set("v", "<leader>d", "\"_d", opts)
 -- Set shared clipboard between os and nvim
 vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
+-- Windows support for help
+vim.o.keywordprg = ':help'
 
 vim.cmd([[
   augroup WindowManagement
