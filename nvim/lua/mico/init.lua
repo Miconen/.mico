@@ -1,9 +1,10 @@
+-- lazy.nvim
+require("mico.lazy")
+
 -- Basic vim setup
 require('mico.settings')
 require('mico.remap')
 
-require('lualine').setup()
-
 -- Imports of vim plugins
-require('mico.plugins')
-
+local plugins = require("mico.plugins")
+require("lazy").setup(plugins)
