@@ -45,13 +45,13 @@ return {
     {
         "nvim-lualine/lualine.nvim",
         dependencies = { "kyazdani42/nvim-web-devicons" },
-        config = function() require("lualine").setup {} end
+        config = function() require("lualine").setup() end
     },
 
     -- Misc
     "JoosepAlviste/nvim-ts-context-commentstring",
     "kylechui/nvim-surround",
     "christoomey/vim-tmux-navigator",
-    "windwp/nvim-autopairs",
+    { "windwp/nvim-autopairs", config = function() require("nvim-autopairs").setup() end },
     { "terrortylor/nvim-comment", config = function() require("nvim_comment").setup() end },
 }
