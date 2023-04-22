@@ -4,7 +4,6 @@ vim.g.loaded_netrwPlugin = 1
 
 require("nvim-tree").setup {
     view = {
-        hide_root_folder = true,
         mappings = {
             custom_only = false,
             list = {
@@ -13,6 +12,7 @@ require("nvim-tree").setup {
         },
     },
     renderer = {
+        root_folder_label = false,
         group_empty = true,
         highlight_git = true,
         full_name = false,
