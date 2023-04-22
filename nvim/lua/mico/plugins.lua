@@ -53,4 +53,5 @@ return {
     "kylechui/nvim-surround",
     "christoomey/vim-tmux-navigator",
     "windwp/nvim-autopairs",
+    { "terrortylor/nvim-comment", config = function() require("nvim_comment").setup() end },
 }
