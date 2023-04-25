@@ -54,4 +54,5 @@ return {
     "christoomey/vim-tmux-navigator",
     { "windwp/nvim-autopairs", config = function() require("nvim-autopairs").setup() end },
     { "terrortylor/nvim-comment", config = function() require("nvim_comment").setup() end },
+    'gelguy/wilder.nvim',
 }
