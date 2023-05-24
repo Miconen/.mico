@@ -46,6 +46,9 @@ return {
 		dependencies = { "kyazdani42/nvim-web-devicons" },
 	},
 
+	-- undotree
+	"mbbill/undotree",
+
 	-- refactoring.nvim
 	{
 		"ThePrimeagen/refactoring.nvim",
