@@ -27,7 +27,9 @@ return {
     -- Treesitter
     {
         "nvim-treesitter/nvim-treesitter",
-        -- { build = "TSUpdate" }
+        build = function()
+          pcall(vim.cmd, 'TSUpdate')
+        end,
     },
     "nvim-treesitter/nvim-treesitter-context",
 
@@ -41,6 +43,16 @@ return {
         opts = {},
         -- Optional dependencies
         dependencies = { "kyazdani42/nvim-web-devicons" },
+    },
+
+    -- refactoring.nvim
+    {
+        "ThePrimeagen/refactoring.nvim",
+        dependencies = {
+            "nvim-lua/plenary.nvim",
+            "nvim-treesitter/nvim-treesitter"
+        },
+        config = function() require("refactoring").setup() end
     },
 
     -- Visual
@@ -59,5 +71,5 @@ return {
     "christoomey/vim-tmux-navigator",
     { "windwp/nvim-autopairs", config = function() require("nvim-autopairs").setup() end },
     { "terrortylor/nvim-comment", config = function() require("nvim_comment").setup() end },
-    'gelguy/wilder.nvim',
+    {'gelguy/wilder.nvim', build = function() pcall(vim.cmd, 'UpdateRemotePlugins') end },
 }
