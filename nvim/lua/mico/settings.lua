@@ -17,5 +17,5 @@ vim.o.shiftwidth = 4
 vim.o.numberwidth = 4
 vim.o.showmode = false
 vim.o.showtabline = 2
-vim.o.signcolumn = 'yes'
-vim.o.mouse = 'a'
+vim.o.signcolumn = "yes"
+vim.o.mouse = "a"
