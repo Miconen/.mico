@@ -3,6 +3,7 @@
     "Lua.diagnostics.globals": [
         "vim",
         "use",
-        "required"
+        "required",
+        "opts"
     ]
 }
