@@ -2,7 +2,6 @@ local lsp = require("lsp-zero").preset("recommended")
 
 local cmp = require("cmp")
 local cmp_action = require("lsp-zero").cmp_action()
-local cmp_select = require("lsp-zero").cmp_select()
 
 cmp.setup({
 	mapping = {

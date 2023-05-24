@@ -7,4 +7,4 @@ require("mico.remap")
 
 -- Imports of vim plugins
 local plugins = require("mico.plugins")
-require("mico.lazy").setup(plugins)
+require("lazy").setup(plugins)
