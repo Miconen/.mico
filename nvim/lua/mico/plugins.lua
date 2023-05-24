@@ -35,8 +35,13 @@ return {
     { "nvim-telescope/telescope.nvim", dependencies = { "nvim-lua/plenary.nvim" } },
     "nvim-telescope/telescope-file-browser.nvim",
 
-    -- nvim-tree
-    { 'nvim-tree/nvim-tree.lua', dependencies = { "kyazdani42/nvim-web-devicons" } },
+    -- oil.nvim 
+    {
+        'stevearc/oil.nvim',
+        opts = {},
+        -- Optional dependencies
+        dependencies = { "kyazdani42/nvim-web-devicons" },
+    },
 
     -- Visual
     "lukas-reineke/indent-blankline.nvim",
