@@ -78,6 +78,7 @@ return {
 	"lukas-reineke/indent-blankline.nvim",
 	"petertriho/nvim-scrollbar",
 	"lewis6991/gitsigns.nvim",
+    "onsails/lspkind.nvim",
 	{
 		"nvim-lualine/lualine.nvim",
 		dependencies = { "kyazdani42/nvim-web-devicons" },
