@@ -85,6 +85,10 @@ return {
 			require("lualine").setup()
 		end,
 	},
+	-- DB
+	"tpope/vim-dadbod",
+	"kristijanhusak/vim-dadbod-ui",
+    "kristijanhusak/vim-dadbod-completion",
 
 	-- Misc
 	"JoosepAlviste/nvim-ts-context-commentstring",
