@@ -1,3 +1,11 @@
+local function tabnine_build_path()
+	if vim.loop.os_uname().sysname == "Windows_NT" then
+		return "powershell.exe -File .\\install.ps1"
+	else
+		return "./install.sh"
+	end
+end
+
 return {
 	-- LSP
 	{
@@ -78,7 +86,7 @@ return {
 	"lukas-reineke/indent-blankline.nvim",
 	"petertriho/nvim-scrollbar",
 	"lewis6991/gitsigns.nvim",
-    "onsails/lspkind.nvim",
+	"onsails/lspkind.nvim",
 	{
 		"nvim-lualine/lualine.nvim",
 		dependencies = { "kyazdani42/nvim-web-devicons" },
@@ -86,10 +94,18 @@ return {
 			require("lualine").setup()
 		end,
 	},
+
 	-- DB
 	"tpope/vim-dadbod",
 	"kristijanhusak/vim-dadbod-ui",
-    "kristijanhusak/vim-dadbod-completion",
+	"kristijanhusak/vim-dadbod-completion",
+
+	-- Tabnine
+	{
+		"tzachar/cmp-tabnine",
+		build = tabnine_build_path(),
+		dependencies = "hrsh7th/nvim-cmp",
+	},
 
 	-- Misc
 	"JoosepAlviste/nvim-ts-context-commentstring",
