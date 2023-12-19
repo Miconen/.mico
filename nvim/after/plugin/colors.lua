@@ -10,8 +10,5 @@ vim.g.tokyonight_lualine_bold = true
 vim.cmd([[ colorscheme tokyonight ]])
 vim.cmd([[ silent! highlight Normal guibg=none ]])
 
-require("indent_blankline").setup({
-	space_char_blankline = " ",
-	show_current_context = true,
-	show_current_context_start = true,
-})
+-- indent-blankline
+require("ibl").setup({})

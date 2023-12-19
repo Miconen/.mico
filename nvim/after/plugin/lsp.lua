@@ -84,7 +84,6 @@ vim.api.nvim_set_hl(0, "CmpItemKindFolder", { fg = "#F5EBD9", bg = "#D4A959" })
 vim.api.nvim_set_hl(0, "CmpItemKindMethod", { fg = "#DDE5F5", bg = "#6C8ED4" })
 vim.api.nvim_set_hl(0, "CmpItemKindValue", { fg = "#DDE5F5", bg = "#6C8ED4" })
 vim.api.nvim_set_hl(0, "CmpItemKindEnumMember", { fg = "#DDE5F5", bg = "#6C8ED4" })
-vim.api.nvim_set_hl(0, "CmpItemKindTabNine", { fg = "#DDE5F5", bg = "#6C8ED4" })
 
 vim.api.nvim_set_hl(0, "CmpItemKindInterface", { fg = "#D8EEEB", bg = "#58B5A8" })
 vim.api.nvim_set_hl(0, "CmpItemKindColor", { fg = "#D8EEEB", bg = "#58B5A8" })
@@ -95,7 +94,6 @@ cmp.setup({
 		{ name = "nvim_lsp" },
 		{ name = "buffer" },
 		{ name = "path" },
-		{ name = "cmp_tabnine" },
 	},
 	mapping = {
 		["<TAB>"] = cmp_action.luasnip_supertab(cmp_select),
@@ -103,28 +101,11 @@ cmp.setup({
 		["<CR>"] = cmp.mapping.confirm({ select = true }),
 		["<C-Space>"] = cmp.mapping.complete(),
 	},
-	-- formatting = {
-	-- 	fields = { "kind", "abbr", "menu" },
-	-- 	format = function(entry, vim_item)
-	-- 		local kind = require("lspkind").cmp_format({ mode = "symbol_text", maxwidth = 50 })(entry, vim_item)
-	-- 		local strings = vim.split(kind.kind, "%s", { trimempty = true })
-	-- 		kind.kind = " " .. (strings[1] or "") .. " "
-	-- 		kind.menu = "    (" .. (strings[2] or "") .. ")"
-	--
-	-- 		return kind
-	-- 	end,
-	-- },
 	formatting = {
 		fields = { "kind", "abbr", "menu" },
 		format = function(entry, vim_item)
 			local kind = require("lspkind").cmp_format({ mode = "symbol_text", maxwidth = 50 })(entry, vim_item)
 			local strings = vim.split(kind.kind, "%s", { trimempty = true })
-
-			-- Check if the entry is from cmp_tabnine
-			if entry.source.name == "cmp_tabnine" then
-				strings[1] = ""
-				strings[2] = "TabNine"
-			end
 
 			kind.kind = " " .. (strings[1] or "") .. " "
 			kind.menu = "    (" .. (strings[2] or "") .. ")"
@@ -138,9 +119,8 @@ cmp.setup({
 	sorting = {
 		priority_weight = 2,
 		comparators = {
-			require("cmp_tabnine.compare"),
-			compare.exact,
 			compare.recently_used,
+			compare.exact,
 		},
 	},
 	window = {

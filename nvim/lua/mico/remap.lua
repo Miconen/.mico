@@ -18,6 +18,7 @@ vim.keymap.set("n", "<C-d>", "<C-d>zz", opts)
 vim.keymap.set("n", "<C-u>", "<C-u>zz", opts)
 vim.keymap.set("n", "n", "nzzzv", opts)
 vim.keymap.set("n", "N", "Nzzzv", opts)
+vim.keymap.set("n", "<CR>", "za", opts)
 
 -- Delete without storing in rergister
 -- vim.keymap.set("n", "<leader>d", '"_d', opts)

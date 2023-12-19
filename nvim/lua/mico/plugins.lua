@@ -1,11 +1,3 @@
-local function tabnine_build_path()
-    if vim.loop.os_uname().sysname == "Windows_NT" then
-        return "powershell.exe -File .\\install.ps1"
-    else
-        return "./install.sh"
-    end
-end
-
 return {
     -- LSP
     {
@@ -75,6 +67,7 @@ return {
         end,
     },
 
+
     -- null-ls
     {
         "jay-babu/mason-null-ls.nvim",
@@ -87,6 +80,9 @@ return {
             require("null-ls")
         end,
     },
+
+    -- Copilot
+    "github/copilot.vim",
 
     -- Visual
     "lukas-reineke/indent-blankline.nvim",
@@ -106,14 +102,7 @@ return {
     "kristijanhusak/vim-dadbod-ui",
     "kristijanhusak/vim-dadbod-completion",
 
-    -- Tabnine
-    {
-        "tzachar/cmp-tabnine",
-        build = tabnine_build_path(),
-        dependencies = "hrsh7th/nvim-cmp",
-    },
-
-    -- Misc
+    --     -- Misc
     "JoosepAlviste/nvim-ts-context-commentstring",
     {
         "kylechui/nvim-surround",
@@ -140,4 +129,5 @@ return {
             pcall(vim.cmd, "UpdateRemotePlugins")
         end,
     },
+    "anuvyklack/pretty-fold.nvim",
 }
