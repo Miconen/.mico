@@ -1,18 +1,21 @@
+-- Default options
 local opts = { noremap = true, silent = true }
-vim.keymap.set("i", "<NL>", "<C-o>o", opts) -- <NL> is basically <C-CR>
 
-vim.keymap.set("n", "vs", ":vs<CR>", opts)
-vim.keymap.set("n", "sp", ":sp<CR>", opts)
-vim.keymap.set("n", "<C-L>", "<C-W><C-L>", opts)
-vim.keymap.set("n", "<C-H>", "<C-W><C-H>", opts)
-vim.keymap.set("n", "<C-K>", "<C-W><C-K>", opts)
-vim.keymap.set("n", "<C-J>", "<C-W><C-J>", opts)
-vim.keymap.set("n", "tn", ":tabnew<CR>", opts)
-vim.keymap.set("n", "tk", ":tabnext<CR>", opts)
-vim.keymap.set("n", "tj", ":tabprev<CR>", opts)
-vim.keymap.set("n", "to", ":tabo<CR>", opts)
-vim.keymap.set("n", "<C-S>", ":%s/", opts)
-vim.keymap.set("n", "<leader>tt", ":sp<CR> :term<CR> :resize 15N<CR> :setlocal nonumber norelativenumber<CR> i", opts)
+vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', opts)
+
+-- Remap for dealing with word wrap
+vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
+vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
+
+-- Window splits and navigationremap
+vim.keymap.set("n", "vs", ":vs<CR>", { desc = 'Split the window vertically' })
+vim.keymap.set("n", "sp", ":sp<CR>", { desc = 'Split the window horizontally' })
+vim.keymap.set("n", "<C-L>", "<C-W>l", opts)
+vim.keymap.set("n", "<C-H>", "<C-W>h", opts)
+vim.keymap.set("n", "<C-K>", "<C-W>k", opts)
+vim.keymap.set("n", "<C-J>", "<C-W>j", opts)
+
+-- Miscellanious binds
 vim.keymap.set("n", "J", "mzJ`z", opts)
 vim.keymap.set("n", "<C-d>", "<C-d>zz", opts)
 vim.keymap.set("n", "<C-u>", "<C-u>zz", opts)
@@ -20,31 +23,34 @@ vim.keymap.set("n", "n", "nzzzv", opts)
 vim.keymap.set("n", "N", "Nzzzv", opts)
 vim.keymap.set("n", "<CR>", "za", opts)
 
--- Delete without storing in rergister
--- vim.keymap.set("n", "<leader>d", '"_d', opts)
--- vim.keymap.set("v", "<leader>d", '"_d', opts)
+-- Highlight on yank
+local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
+vim.api.nvim_create_autocmd('TextYankPost', {
+	callback = function()
+		vim.highlight.on_yank()
+	end,
+	group = highlight_group,
+	pattern = '*',
+})
 
-vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], opts)
+-- Document existing key chains
+require('which-key').register {
+	['<leader>c'] = { name = '[C]ode', _ = 'which_key_ignore' },
+	['<leader>d'] = { name = '[D]atabase', _ = 'which_key_ignore' },
+	['<leader>g'] = { name = '[G]it', _ = 'which_key_ignore' },
+	['<leader>h'] = { name = 'Git [H]unk', _ = 'which_key_ignore' },
+	['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
+	['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
+	['<leader>t'] = { name = '[T]oggle', _ = 'which_key_ignore' },
+	['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
+	['<leader>o'] = { name = '[O]bsidian', _ = 'which_key_ignore' },
+}
+-- register which-key VISUAL mode
+-- required for visual <leader>hs (hunk stage) to work
+require('which-key').register({
+	['<leader>'] = { name = 'VISUAL <leader>' },
+	['<leader>h'] = { 'Git [H]unk' },
+}, { mode = 'v' })
 
-vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", opts)
-
-vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", opts)
-vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", opts)
 vim.keymap.set("v", ">", ">gv", opts)
 vim.keymap.set("v", "<", "<gv", opts)
--- Set shared clipboard between os and nvim
-vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
--- Windows support for help
-vim.o.keywordprg = ":help"
-
-vim.cmd([[
-  augroup WindowManagement
-    autocmd!
-    autocmd WinEnter * call Handle_Win_Enter()
-  augroup END
-
-  function! Handle_Win_Enter()
-    setlocal winhighlight=Normal:ActiveWindow,NormalNC:InactiveWindow
-    highlight SignColumn guibg=Normal:ActiveWindow,NormalNC:InactiveWindow
-  endfunction
-]])
