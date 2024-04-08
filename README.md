@@ -22,3 +22,11 @@ stow .
 # Force apply symlinks to dotfiles (destructive)
 stow --adopt .
 ```
+
+## Updating
+
+To update the zsh plugins and nvim configuration submodules run this
+
+```bash
+git submodule update --recursive --remote
+```
