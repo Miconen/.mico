@@ -1,9 +1,4 @@
-// If you'd like to override the default keybindings completely, be sure to change "keybinds" to "keybinds clear-defaults=true"
-keybinds {
-    normal {
-        // uncomment this and adjust key if using copy_on_select=false
-        // bind "Alt c" { Copy; }
-    }
+keybinds clear-defaults=true {
     locked {
         bind "Ctrl g" { SwitchToMode "Normal"; }
     }
@@ -144,6 +139,8 @@ keybinds {
         bind "Space" { NextSwapLayout; }
         bind "x" { CloseFocus; SwitchToMode "Normal"; }
     }
+
+    // All modes but locked
     shared_except "locked" {
         bind "Ctrl g" { SwitchToMode "Locked"; }
         bind "Ctrl q" { Quit; }
@@ -157,6 +154,9 @@ keybinds {
         bind "Alt [" { PreviousSwapLayout; }
         bind "Alt ]" { NextSwapLayout; }
     }
+
+    // Keybinds to enter specific modes
+    // ...prevent entering already active mode
     shared_except "normal" "locked" {
         bind "Enter" "Esc" { SwitchToMode "Normal"; }
     }
@@ -223,4 +223,4 @@ theme "Tokyo Night"
 layout_dir "~/.config/zellij/layouts"
 
 // The folder in which Zellij will look for themes
-theme_dir "~/.config/zellij/themes"
+// theme_dir "~/.config/zellij/themes"
