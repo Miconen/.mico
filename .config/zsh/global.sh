@@ -55,6 +55,11 @@ compinit
 # Zoxide
 eval "$(zoxide init zsh)"
 
+if [[ -x "$(command -v zellij)" ]];
+then
+    eval "$(zellij setup --generate-completion zsh | grep "^function")"
+fi;
+
 # theme/plugins
 source ~/.config/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source ~/.config/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
