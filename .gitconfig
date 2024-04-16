@@ -1,0 +1,27 @@
+[core]
+	editor = nvim
+[credential]
+	helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe
+[init]
+	defaultBranch = main
+[push]
+	autosetupremote = true
+[merge]
+	conflicstyle = zdiff3
+	tool = nvim
+[branch]
+	sort = -committerdate
+[include]
+  path = ~/.gitconfig.local
+[help]
+	autocorrect = 5
+[url "git@github.com:"]
+	insteadOf = "https://github.com/"
+[submodule]
+	recurse = true
+[status]
+	submoduleSummary = true
+[diff]
+	sudmodule = log
+	colorMoved = default
+	algorithm = histogram
