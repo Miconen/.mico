@@ -23,9 +23,12 @@ HISTFILE=~/.zsh_history
 
 # Aliases
 # Configs
+EDITOR=$(which nvim)
+export EDITOR=$EDITOR
 alias .zshrc="$EDITOR ~/.zshrc"
 alias .vimrc="$EDITOR ~/.config/nvim"
 alias nvimdiff='nvim -d'
+alias todo="$EDITOR ~/.todo.md"
 
 # Utility
 alias :q=exit

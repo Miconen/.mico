@@ -1,13 +1,9 @@
-case `uname` in
-    # Linux settings file
-    Linux )
-        source ~/.config/zsh/linux.sh
-    ;;
-    # MacOS settigs file
-    Darwin )
-        source ~/.config/zsh/macos.sh
-    ;;
-esac
+clear
+neofetch
+
+if [[ uname == "Darwin" ]]; then
+    source ~/.config/zsh/macos.sh || echo "Error: Could not source macOS settings."
+fi
 
 # Global settings file
-source ~/.config/zsh/global.sh
+source ~/.config/zsh/global.sh || echo "Error: Could not source global settings."
