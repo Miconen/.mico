@@ -1,3 +1,8 @@
+# Check if ZELLIJ is set and not equal to 0
+if [[ $ZELLIJ != 0 ]]; then
+    zellij -l welcome
+fi
+
 clear
 neofetch
 
