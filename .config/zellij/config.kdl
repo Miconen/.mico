@@ -25,7 +25,7 @@ keybinds clear-defaults=true {
         bind "l" "Right" { MoveFocus "Right"; }
         bind "j" "Down" { MoveFocus "Down"; }
         bind "k" "Up" { MoveFocus "Up"; }
-        bind "p" { SwitchFocus; }
+        // bind "p" { SwitchFocus; }
         bind "n" { NewPane; SwitchToMode "Normal"; }
         bind "d" { NewPane "Down"; SwitchToMode "Normal"; }
         bind "r" { NewPane "Right"; SwitchToMode "Normal"; }
@@ -193,38 +193,17 @@ plugins {
     strider { path "strider"; }
     compact-bar { path "compact-bar"; }
     session-manager { path "session-manager"; }
+    welcome-screen { path "welcome-screen"; }
 }
-
-// Choose what to do when zellij receives SIGTERM, SIGINT, SIGQUIT or SIGHUP
-// eg. when terminal window with an active zellij session is closed
-// Options:
-//   - detach (Default)
-//   - quit
-//
-// on_force_close "quit"
-
-// Toggle between having pane frames around the panes
-// Options:
-//   - true (default)
-//   - false
-//
-// pane_frames true
-
-// Whether sessions should be serialized to the cache folder (including their tabs/panes, cwds and running commands) so that they can later be resurrected
-session_serialization true
-
-// Whether pane viewports are serialized along with the session, default is false
-serialize_pane_viewport true
 
 // Choose the theme that is specified in the themes section.
 // For more examples, see: https://github.com/zellij-org/zellij/tree/main/example/themes
-theme "Tokyo Night"
+theme "tokyo-night-dark"
 
-// The name of the default layout to load on startup
-// default_layout "default"
+// Whether sessions should be serialized to the cache folder (including their tabs/panes, cwds and running commands) so that they can later be resurrected
+session_serialization true
+// Whether pane viewports are serialized along with the session, default is false
+serialize_pane_viewport true
 
-// The folder in which Zellij will look for layouts
-layout_dir "~/.config/zellij/layouts"
-
-// The folder in which Zellij will look for themes
-// theme_dir "~/.config/zellij/themes"
+on_force_close "quit"
+pane_frames false
