@@ -18,3 +18,7 @@
 	path = .config/zsh/zsh-you-should-use
 	url = git@github.com:MichaelAquilina/zsh-you-should-use.git
 	branch = main
+[submodule "powerlevel10k"]
+	path = powerlevel10k
+	url = git@github.com:romkatv/powerlevel10k.git
+	branch = main

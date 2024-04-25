@@ -10,11 +10,16 @@ source /etc/environment
 # Rust/Cargo
 . "$HOME/.cargo/env"
 
-
 # NVM
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Zoxide
+eval "$(zoxide init zsh)"
+
+# SSH
+eval "$(keychain --eval --agents ssh id_ed25519)"
 
 # Keep 1000 lines of history within the shell and save it to ~/.zsh_history:
 HISTSIZE=1000
@@ -24,11 +29,13 @@ HISTFILE=~/.zsh_history
 # Aliases
 # Configs
 EDITOR=$(which nvim)
+python=$(which python3)
 export EDITOR=$EDITOR
 alias .zshrc="$EDITOR ~/.zshrc"
 alias .vimrc="$EDITOR ~/.config/nvim"
 alias nvimdiff='nvim -d'
 alias todo="$EDITOR ~/.todo.md"
+alias dcb="sudo docker compose up --build"
 
 # Utility
 alias :q=exit
@@ -55,13 +62,9 @@ setopt no_list_ambiguous
 autoload -U compinit
 compinit
 
-# Zoxide
-eval "$(zoxide init zsh)"
-
-if [[ -x "$(command -v zellij)" ]];
-then
-    eval "$(zellij setup --generate-completion zsh | grep "^function")"
-fi;
+# eval "$(zellij setup --generate-completion zsh)"
+# FZF
+source ~/.config/zsh/fzf.sh
 
 # theme/plugins
 source ~/.config/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh

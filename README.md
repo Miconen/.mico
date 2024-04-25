@@ -6,7 +6,12 @@
 
 ### System
 ```bash
-sudo apt-get install zsh stow fd-find
+sudo apt install zsh stow fd-find fzf keychain neofetch
+```
+
+### Zoxide
+```
+curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
 ```
 
 ### NeoVim
