@@ -6,12 +6,15 @@
 
 ### System
 ```bash
-sudo apt install zsh stow fd-find fzf keychain neofetch
+sudo apt install zsh stow fd-find fzf keychain neofetch zoxide unzip ripgrep && sudo snap install nvim --classic
 ```
 
-### Zoxide
-```
-curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+### Lazygit
+```bash
+LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+tar xf lazygit.tar.gz lazygit
+sudo install lazygit /usr/local/bin
 ```
 
 ### NeoVim
@@ -29,7 +32,7 @@ sudo apt update; sudo apt install --install-if-missing "yarn" "ranger" "rust-fd-
 ### Configuration files
 
 ```bash
-git clone --recurse-submodules -j8 git@github.com:Miconen/.mico.git ~/.mico
+git clone --recursive -j8 git@github.com:Miconen/.mico.git ~/.mico
 
 cd ~/.mico
 
