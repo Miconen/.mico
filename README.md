@@ -26,12 +26,7 @@ sudo apt update; sudo apt install --install-if-missing "yarn" "ranger" "rust-fd-
 
 #### System
 ```bash
-sudo brew install stow zsh fd fzf neofetch zoxide unzip ripgrep neovim
-```
-
-#### Lazygit
-```bash
-brew install jesseduffield/lazygit/lazygit
+sudo brew install stow zsh fd fzf neofetch zoxide unzip ripgrep neovim jesseduffield/lazygit/lazygit jesseduffield/lazydocker/lazydocker
 ```
 
 #### NeoVim
