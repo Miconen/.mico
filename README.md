@@ -30,6 +30,9 @@ sudo brew install stow zsh fd fzf neofetch zoxide unzip ripgrep neovim jesseduff
 ```
 
 #### NeoVim
+
+I personally prefer to use [Maple Mono NF](https://github.com/subframe7536/maple-font) as my font.
+
 ```bash
 brew install "ranger" "fd" "git-delta" "rustup-init" "yarn" "mingw-w64" "dotnet" "mono" "openjdk" "dart-sdk" "kotlin" "elixir" "node" "typescript" "make" "rust" "go" "nasm" "r" "ruby" "perl" "lua" "swift" "pyinstaller" "doxygen"; sudo brew install --cask "dotnet-sdk" "flutter"; pip install "pynvim" "pytest" "Nuitka"; yarn add global "jest" "jsdoc" "typedoc"; cargo install "cargo-nextest" "grcov"; go install "golang.org/x/tools/cmd/godoc@latest"
 ```
