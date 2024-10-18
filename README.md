@@ -6,7 +6,7 @@
 
 #### System
 ```bash
-sudo apt install zsh stow fd-find fzf keychain neofetch zoxide unzip ripgrep && sudo snap install nvim --classic
+sudo apt install zsh stow mise eza fd-find fzf keychain neofetch zoxide unzip ripgrep && sudo snap install nvim --classic
 ```
 
 #### Lazygit

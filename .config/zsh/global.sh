@@ -16,7 +16,13 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 # Zoxide
-eval "$(zoxide init zsh)"
+if command -v mise &> /dev/null; then
+  eval "$(mise activate zsh)"
+fi
+
+if command -v zoxide &> /dev/null; then
+  eval "$(zoxide init zsh)"
+fi
 
 # SSH
 eval "$(keychain --eval --agents ssh id_ed25519)"
@@ -28,18 +34,10 @@ HISTFILE=~/.zsh_history
 
 # Aliases
 # Configs
-EDITOR=$(which nvim)
-python=$(which python3)
-export EDITOR=$EDITOR
-alias .zshrc="$EDITOR ~/.zshrc"
-alias .vimrc="$EDITOR ~/.config/nvim"
-alias nvimdiff='nvim -d'
-alias todo="$EDITOR ~/.todo.md"
-alias dcb="sudo docker compose up --build"
+export EDITOR=$(which nvim)
+export SUDO_EDITOR="$EDITOR"
 
-# Utility
-alias :q=exit
-alias c="clear"
+source ~/.config/zsh/aliases
 
 # options
 unsetopt menu_complete
