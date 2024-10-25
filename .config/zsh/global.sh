@@ -37,6 +37,8 @@ alias nvimdiff='nvim -d'
 alias todo="$EDITOR ~/.todo.md"
 alias dcb="sudo docker compose up --build"
 
+source ~/.venvs/tectonic-bingo/bin/activate
+
 # Utility
 alias :q=exit
 alias c="clear"
