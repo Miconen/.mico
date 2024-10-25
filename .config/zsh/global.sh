@@ -38,6 +38,7 @@ export EDITOR=$(which nvim)
 export SUDO_EDITOR="$EDITOR"
 
 source ~/.config/zsh/aliases
+source ~/.venvs/tectonic-bingo/bin/activate
 
 # options
 unsetopt menu_complete
