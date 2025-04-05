@@ -5,6 +5,8 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+export PATH=$PATH:/home/mico/go/bin/
+
 # Global settings file
 source /etc/environment
 # Rust/Cargo
@@ -25,7 +27,10 @@ if command -v zoxide &> /dev/null; then
 fi
 
 # SSH
-eval "$(keychain --eval --agents ssh id_ed25519)"
+eval "$(keychain --eval --agents ssh id_rsa)"
+
+# Docker podman emulation
+export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock
 
 # Keep 1000 lines of history within the shell and save it to ~/.zsh_history:
 HISTSIZE=1000
@@ -38,7 +43,7 @@ export EDITOR=$(which nvim)
 export SUDO_EDITOR="$EDITOR"
 
 source ~/.config/zsh/aliases
-source ~/.venvs/tectonic-bingo/bin/activate
+source /usr/share/nvm/nvm.sh
 
 # options
 unsetopt menu_complete

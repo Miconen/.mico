@@ -32,7 +32,8 @@ alias lzg='lazygit'
 alias lzd='lazydocker'
 
 # Docker
-alias dcb="sudo docker compose up --build"
+alias dcb="docker compose up --build"
+alias dev="docker compose --profile dev up --build"
 
 # Git
 alias gcm='git commit -m'
