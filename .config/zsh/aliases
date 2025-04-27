@@ -33,9 +33,16 @@ alias lzd='lazydocker'
 
 # Docker
 alias dcb="docker compose up --build"
-alias dev="docker compose --profile dev up --build"
+alias api="docker compose --profile dev up --build"
+
+# Node
+alias bot="npm run start | pino-pretty -c"
+alias bot-test="AUTH_KEY=123 LOG_LEVEL=silent npm run test"
 
 # Git
 alias gcm='git commit -m'
 alias gcam='git commit -a -m'
 alias gcad='git commit -a --amend'
+
+# Zellij
+alias zf='zellij action new-pane -f -- '
