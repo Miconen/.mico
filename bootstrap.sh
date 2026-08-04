@@ -231,6 +231,25 @@ fi
 
 ok "running as $(whoami), home $HOME"
 
+# makepkg (and therefore paru) needs bash's `compgen`, which nixpkgs'
+# non-interactive bash does not have: it is built with --disable-readline, and
+# bash disables programmable completion along with readline. If such a bash wins
+# on PATH, AUR builds fail with "compgen: command not found" inside fakeroot.
+#
+# The AUR phases below prepend /usr/bin to work around it, but warn here too,
+# because the same trap catches any manual makepkg or paru run.
+if [[ -n "${IN_NIX_SHELL:-}" ]]; then
+  warn "running inside a nix shell (IN_NIX_SHELL=${IN_NIX_SHELL})."
+  warn "its bash lacks compgen, which breaks makepkg. Prefer running this from a"
+  warn "plain shell, or outside \$HOME/.mico if direnv loads the devShell there."
+fi
+
+bash_path="$(command -v bash || true)"
+if [[ -n "$bash_path" && "$bash_path" != /usr/bin/bash && "$bash_path" != /bin/bash ]]; then
+  warn "bash on PATH is $bash_path, not /usr/bin/bash"
+  warn "if it came from nix it has no compgen and manual makepkg/paru will fail"
+fi
+
 # ---------------------------------------------------------------------------
 # 1. btrfs subvolume for /nix (Arch laptop, before nix exists)
 # ---------------------------------------------------------------------------
@@ -386,8 +405,20 @@ else
   else
     ok "building $AUR_HELPER_PKG from the AUR"
     aur_tmp="$(mktemp -d)"
+
+    # makepkg must run with the system bash first on PATH.
+    #
+    # nixpkgs' non-interactive bash is built with --disable-readline, which also
+    # disables bash's programmable completion, so it has no `compgen`. makepkg's
+    # /usr/share/makepkg/util/config.sh calls compgen and dies with
+    # "compgen: command not found" inside the fakeroot environment if a nix bash
+    # shadows /usr/bin/bash.
+    #
+    # Prepending rather than replacing, so anything else makepkg needs is still
+    # reachable further down PATH.
     if git clone --depth 1 "https://aur.archlinux.org/${AUR_HELPER_PKG}.git" "$aur_tmp/$AUR_HELPER_PKG" \
-      && ( cd "$aur_tmp/$AUR_HELPER_PKG" && makepkg -si --noconfirm ); then
+      && ( cd "$aur_tmp/$AUR_HELPER_PKG" \
+           && PATH="/usr/bin:/usr/local/bin:$PATH" makepkg -si --noconfirm ); then
       ok "paru installed"
     else
       warn "could not build $AUR_HELPER_PKG - AUR packages will be skipped"
@@ -425,7 +456,9 @@ else
     warn "paru unavailable, skipping: ${aur_missing[*]}"
   else
     ok "installing ${#aur_missing[@]} from the AUR: ${aur_missing[*]}"
-    run paru -S --needed --noconfirm -- "${aur_missing[@]}" \
+    # paru shells out to makepkg, so it needs the same system-bash-first PATH.
+    run env PATH="/usr/bin:/usr/local/bin:$PATH" \
+      paru -S --needed --noconfirm -- "${aur_missing[@]}" \
       || warn "some AUR packages failed"
   fi
 fi
