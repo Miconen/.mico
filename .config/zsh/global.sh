@@ -6,6 +6,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 export PATH=$PATH:/home/mico/go/bin/
+export PATH=$PATH:$(go env GOPATH)/bin
 
 # Global settings file
 source /etc/environment
@@ -27,7 +28,7 @@ if command -v zoxide &> /dev/null; then
 fi
 
 # SSH
-eval "$(keychain --eval --agents ssh id_rsa)"
+eval "$(keychain --eval ssh id_ed25519)"
 
 # Docker podman emulation
 export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock
