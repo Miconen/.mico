@@ -18,6 +18,7 @@ Idempotent — re-run it after editing `packages/*.txt`. Use `--dry-run` first o
 machine you care about.
 
 ```
+--check       report pacman drift and exit, read-only, no sudo
 --dry-run     change nothing, just print
 --host wsl    override host detection
 --yes         no prompts
@@ -27,7 +28,15 @@ machine you care about.
 
 It does: btrfs subvolume for `/nix` → install nix → `auto-optimise-store` →
 pacman sync → submodules → `~/.gitconfig.local` → `home-manager switch` →
-remove pacman packages nix replaced → enable `podman.socket`.
+remove pacman packages nix replaced → enable `podman.socket` → install the
+root-level GC timer.
+
+`--check` audits pacman against `packages/*.txt` in both directions and exits 1
+on drift. Run it when you suspect you `pacman -S`’d something and forgot:
+
+```bash
+~/.mico/bootstrap.sh --check
+```
 
 ### WSL first
 
@@ -65,6 +74,27 @@ hms && exec zsh
 
 `git add` new files before switching — flakes read the git tree and **silently
 ignore untracked files**. Editing tracked files uncommitted is fine.
+
+Working on the repo itself:
+
+```bash
+direnv allow            # once; loads nixfmt, statix, deadnix from the devShell
+nix fmt                 # format all .nix
+nix flake check         # builds BOTH hosts
+```
+
+CI builds both hosts on every push. **The workflow is parked at `ci/build.yml`**
+because a fine-grained PAT cannot write to `.github/workflows/`. Activate it with
+your own SSH push:
+
+```bash
+mkdir -p .github/workflows
+git mv ci/build.yml .github/workflows/build.yml
+git commit -m "Enable CI" && git push
+```
+
+The lint job is advisory until `nix fmt` has been run once and committed — then
+drop `continue-on-error` from the workflow.
 
 Preview without switching:
 
@@ -131,6 +161,20 @@ path, since `appendWindowsPath=false` takes them off PATH. Neovim autodetects
 wl-clipboard when `WAYLAND_DISPLAY` is set; without WSLg, point `g:clipboard` at
 `pbcopy`/`pbpaste`.
 
+**No hardware video decode.** This laptop is an AMD Carrizo APU, but the old
+package set installed only Intel VA-API drivers. `mesa` is now the VA-API
+provider (it `replaces libva-mesa-driver`). One-time cleanup of the leftovers:
+
+```bash
+sudo pacman -Rns vulkan-intel vulkan-nouveau intel-media-driver \
+  libva-intel-driver xf86-video-nouveau xf86-video-ati
+sudo pacman -S --asexplicit mesa
+vainfo   # expect radeonsi entries; needs libva-utils
+```
+
+`bootstrap.sh --check` reports these as installed-but-undeclared, but never
+removes undeclared packages automatically.
+
 **`pacman -Rns git` refuses.** Something depends on it.
 `sudo pacman -D --asdeps git` instead.
 
@@ -142,23 +186,28 @@ package (a store login shell can lock you out after GC), or use
 
 - `programs.eza` is not enabled on purpose — its zsh integration defines
   `shellAliases.ls` and collides with ours, which fails evaluation outright.
-- home-manager has no `nix.gc` option, so GC is a user timer in `home/nix-gc.nix`.
+- home-manager has no `nix.gc` option, so user GC is a timer in `home/nix-gc.nix`.
+  The root/system profile is a separate `/etc/systemd/system` timer written by
+  `bootstrap.sh`, and it does **not** roll back with a home-manager generation.
 - `auto-optimise-store` is a daemon setting needing root, so `bootstrap.sh` does it.
 - `mise install` runs on every `hms` as an activation hook. Skip with
   `MICO_SKIP_MISE_INSTALL=1`.
 - `~/.zshrc` is a read-only store symlink. Editing it does nothing.
-- `fastfetch` runs in every interactive shell, so every zellij pane.
 - `dotDir` is pinned to `$HOME`; the default moves to `$XDG_CONFIG_HOME/zsh` at
   stateVersion 26.05.
 - Nothing secret goes in this repo, it's public. Git identity lives in untracked
   `~/.gitconfig.local`.
-- `hosts/wsl.nix` is untested.
+- zellij runs one persistent session named `main`. A wedged session follows you
+  between terminals until `zellij kill-session main`.
+- `hosts/wsl.nix` is built by CI but otherwise untested — CI proves it compiles,
+  not that wsl2-ssh-agent or the clipboard fallbacks work.
 
 ## Layout
 
 ```
-bootstrap.sh         machine setup
-flake.nix            nixpkgs unstable + home-manager master
+ci/build.yml         CI workflow; git mv into .github/workflows/ to enable
+bootstrap.sh         machine setup, --check audits pacman drift
+flake.nix            nixpkgs unstable + home-manager master, devShell, checks
 home/                zsh, starship, git, fzf, mise, tools, nix-gc
 hosts/               arch.nix, wsl.nix
 config/              verbatim: zellij, tmux, kitty, bat theme

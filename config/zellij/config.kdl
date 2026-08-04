@@ -182,6 +182,10 @@ plugins {
     status-bar { path "status-bar"; }
 }
 
+// The shell runs `zellij attach --create main`, which cannot take --layout, so
+// the layout has to be named here instead. Refers to layouts/default.kdl.
+default_layout "default"
+
 // Whether sessions should be serialized to the cache folder (including their tabs/panes, cwds and running commands) so that they can later be resurrected
 session_serialization true
 // Whether pane viewports are serialized along with the session, default is false

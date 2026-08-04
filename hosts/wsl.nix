@@ -46,8 +46,6 @@ in
   # Then `wsl --shutdown` before installing nix.
   # ---------------------------------------------------------------------------
 
-  programs.zsh.shellAliases.hms = "home-manager switch --flake ~/.mico#wsl";
-
   # WSL uses wsl2-ssh-agent to bridge to the Windows ssh-agent, so keychain
   # would fight it for SSH_AUTH_SOCK.
   programs.keychain.enable = false;

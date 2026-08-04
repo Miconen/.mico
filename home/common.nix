@@ -3,6 +3,8 @@
   lib,
   config,
   username,
+  hostName,
+  repoPath,
   ...
 }:
 {
@@ -63,6 +65,11 @@
 
       # terminal font, needed for starship's Catppuccin Powerline glyphs
       maple-mono.NF
+
+      # Maple Mono NF has no emoji coverage, so without this emoji render as
+      # tofu. NOTE: the attribute is noto-fonts-color-emoji; noto-fonts-emoji
+      # no longer exists.
+      noto-fonts-color-emoji
     ];
 
     sessionVariables = {
@@ -93,22 +100,24 @@
   # Self-hosting: guarantees the `home-manager` CLI matches this flake.
   programs.home-manager.enable = true;
 
+  # Defined once from hostName rather than duplicated in each hosts/*.nix.
+  programs.zsh.shellAliases.hms = "home-manager switch --flake ${repoPath}#${hostName}";
+
   xdg.enable = true;
 
   # Neovim config is still its own repo (Miconen/nvim), tracked as a submodule
   # at .config/nvim. mkOutOfStoreSymlink points at the working tree rather than
   # the nix store, so lazy.nvim and Mason can still write lazy-lock.json etc.
-  # Requires: git -C ~/.mico submodule update --init --recursive
-  xdg.configFile."nvim".source =
-    config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.mico/.config/nvim";
+  # Requires: git -C ${repoPath} submodule update --init --recursive
+  xdg.configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink "${repoPath}/.config/nvim";
 
   # The symlink above happily points at an empty directory if the submodule was
   # never initialised, which shows up as "neovim has no config" rather than as
   # an error. Warn loudly instead.
   home.activation.checkNvimSubmodule = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    nvimSrc="${config.home.homeDirectory}/.mico/.config/nvim"
+    nvimSrc="${repoPath}/.config/nvim"
     if [ -z "$(ls -A "$nvimSrc" 2>/dev/null)" ]; then
-      warnEcho "nvim submodule is empty. Run: git -C ~/.mico submodule update --init --recursive"
+      warnEcho "nvim submodule is empty. Run: git -C ${repoPath} submodule update --init --recursive"
     fi
   '';
 }

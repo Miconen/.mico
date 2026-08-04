@@ -12,10 +12,9 @@
   # host should NOT get.
   # ---------------------------------------------------------------------------
 
-  programs.zsh.shellAliases.hms = "home-manager switch --flake ~/.mico#arch";
-
   # keychain handles ssh-agent here. It is enabled by default in home/tools.nix;
   # hosts/wsl.nix turns it off in favour of wsl2-ssh-agent.
+  # The hms alias is built from hostName in home/common.nix.
 
   # kitty's binary comes from pacman (GUI), but its config is managed here so
   # the Nerd Font and Catppuccin theme are not a manual post-install step.

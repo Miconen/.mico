@@ -10,16 +10,21 @@ amd-ucode
 efibootmgr
 
 # GPU / video acceleration.
-# NOTE: this is the full grab-bag archinstall produces. If you know which GPU
-# this laptop has, pruning the other vendors is safe and saves a few hundred MB.
-vulkan-intel
+# This laptop is an AMD Carrizo APU (Wani, Radeon R5/R6/R7, GCN 3) driven by
+# amdgpu - confirmed via lspci. So no Intel and no Nouveau packages here.
+#
+# mesa is listed explicitly because it is now the VA-API provider: it
+# `provides libva-driver` and `replaces libva-mesa-driver`, which was merged
+# into mesa in 24.2.7. Before this, the only VA-API drivers installed were the
+# Intel ones, meaning hardware video decode did nothing on this machine.
+mesa
 vulkan-radeon
-vulkan-nouveau
-intel-media-driver
-libva-intel-driver
+
+# Xorg DDX driver. Arguably unnecessary under Hyprland/Wayland, and Xorg's
+# built-in modesetting driver handles amdgpu fine - but sddm can still start on
+# X11, and "probably unnecessary" is not worth risking a machine that cannot
+# reach a desktop. Safe to drop if you confirm sddm runs on Wayland.
 xf86-video-amdgpu
-xf86-video-ati
-xf86-video-nouveau
 
 # Wayland compositor and session
 hyprland

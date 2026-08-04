@@ -1,0 +1,61 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Builds both host configurations. This is the only validation hosts/wsl.nix
+  # gets until the PC is reachable - it proves the config evaluates and builds,
+  # not that wsl2-ssh-agent or the clipboard fallbacks work at runtime.
+  build:
+    name: build ${{ matrix.host }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [arch, wsl]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Nothing in the flake reads .config/nvim - mkOutOfStoreSymlink only
+          # embeds a path string - so skipping submodules keeps CI fast.
+          submodules: false
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - name: nix build ${{ matrix.host }}
+        run: |
+          nix build ".#homeConfigurations.${{ matrix.host }}.activationPackage" \
+            --no-link --print-build-logs
+
+  # Advisory for now: this repo's Nix was hand-written and is almost certainly
+  # not nixfmt-canonical yet. Run `nix fmt` locally, commit, then delete the
+  # continue-on-error below to make formatting enforced.
+  lint:
+    name: lint (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - name: nixfmt --check
+        # An explicit file list, because passing a directory to nixfmt is not
+        # reliably supported across versions.
+        run: nix develop --command bash -c 'nixfmt --check $(git ls-files "*.nix")'
+
+      - name: statix
+        run: nix develop --command statix check
+
+      - name: deadnix
+        run: nix develop --command deadnix --fail

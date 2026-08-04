@@ -2,6 +2,7 @@
   pkgs,
   lib,
   config,
+  repoPath,
   ...
 }:
 {
@@ -74,8 +75,8 @@
       # Configs
       # The old `.zshrc` alias is pointless now: ~/.zshrc is a read-only
       # symlink into the nix store. Edit the source of truth instead.
-      zshconf = "nvim ~/.mico/home/zsh.nix";
-      nixconf = "nvim ~/.mico/flake.nix";
+      zshconf = "nvim ${repoPath}/home/zsh.nix";
+      nixconf = "nvim ${repoPath}/flake.nix";
       ".vimrc" = "nvim ~/.config/nvim";
       nvimdiff = "nvim -d";
       todo = "nvim ~/.todo.md";
@@ -127,19 +128,19 @@
         #   TERM != dumb   : don't break editors/tooling that spawn a shell
         if [[ -o interactive && -z "$ZELLIJ" && -z "$SSH_CONNECTION" && "$TERM" != "dumb" ]]; then
           if command -v zellij >/dev/null; then
-            exec zellij --layout default
+            # attach --create reuses one persistent session instead of starting a
+            # fresh one per terminal, which is what makes session_serialization
+            # in config.kdl actually do anything. The layout comes from
+            # `default_layout "default"` in config.kdl, because attach --create
+            # does not accept --layout. Downside: a wedged session follows you
+            # until `zellij kill-session main`.
+            exec zellij attach --create main
           fi
         fi
       '')
 
       # ---- order 1000: general config ---------------------------------------
       (lib.mkOrder 1000 ''
-        # Greeting. Note this runs in every interactive shell, which means every
-        # new zellij pane. Comment it out if that gets noisy.
-        if [[ -o interactive ]]; then
-          fastfetch
-        fi
-
         # Options not covered by programs.zsh.history above
         unsetopt menu_complete
         unsetopt flowcontrol

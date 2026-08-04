@@ -14,6 +14,7 @@
 #   ./bootstrap.sh --no-pacman     skip all pacman work
 #   ./bootstrap.sh --no-remove     install pacman packages but never remove any
 #   ./bootstrap.sh --dry-run       print what would happen, change nothing
+#   ./bootstrap.sh --check         report pacman drift and exit; read-only, no sudo
 #
 set -euo pipefail
 
@@ -24,6 +25,7 @@ ASSUME_YES=0
 DO_PACMAN=1
 DO_REMOVE=1
 DRY=0
+CHECK_ONLY=0
 
 # ---------------------------------------------------------------------------
 # output helpers
@@ -57,6 +59,12 @@ confirm() {
   [[ "$reply" == [yY]* ]]
 }
 
+read_list() {
+  # strips comments and blank lines
+  [[ -f "$1" ]] || return 0
+  sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$1"
+}
+
 # ---------------------------------------------------------------------------
 # argument parsing
 # ---------------------------------------------------------------------------
@@ -68,7 +76,8 @@ while [[ $# -gt 0 ]]; do
     --no-pacman) DO_PACMAN=0; shift ;;
     --no-remove) DO_REMOVE=0; shift ;;
     --dry-run|-n) DRY=1; shift ;;
-    -h|--help)   sed -n '3,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --check)     CHECK_ONLY=1; shift ;;
+    -h|--help)   sed -n '3,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)           die "unknown argument: $1" ;;
   esac
 done
@@ -88,6 +97,83 @@ detect_host() {
 [[ -n "$HOST" ]] || HOST="$(detect_host)"
 [[ "$HOST" == "arch" || "$HOST" == "wsl" ]] \
   || die "host must be 'arch' or 'wsl', got '$HOST'"
+
+# ---------------------------------------------------------------------------
+# --check: report drift between packages/*.txt and what pacman actually has.
+# Read-only, needs no sudo, exits 1 if anything is out of sync. This is the
+# useful half of the old backup-package-list timer, without the dump.
+# ---------------------------------------------------------------------------
+if (( CHECK_ONLY )); then
+  step "Pacman drift for host '$HOST'"
+
+  command -v pacman >/dev/null || die "pacman not found, nothing to check"
+
+  mapfile -t declared < <(
+    { read_list "$REPO/packages/common.txt"; read_list "$REPO/packages/$HOST.txt"; } | sort -u
+  )
+  mapfile -t migrated < <(read_list "$REPO/packages/migrated.txt" | sort -u)
+  mapfile -t installed < <(pacman -Qqe | sort -u)
+
+  in_list() {
+    local needle="$1"; shift
+    local x
+    for x in "$@"; do [[ "$x" == "$needle" ]] && return 0; done
+    return 1
+  }
+
+  drift=0
+
+  # declared but absent
+  missing=()
+  for p in "${declared[@]}"; do
+    in_list "$p" "${installed[@]}" || missing+=("$p")
+  done
+  if (( ${#missing[@]} )); then
+    drift=1
+    warn "declared but NOT installed (${#missing[@]}):"
+    printf '      %s\n' "${missing[@]}"
+    printf '      fix: ./bootstrap.sh\n'
+  else
+    ok "all ${#declared[@]} declared packages installed"
+  fi
+
+  # explicitly installed but undeclared
+  undeclared=()
+  for p in "${installed[@]}"; do
+    in_list "$p" "${declared[@]}" && continue
+    in_list "$p" "${migrated[@]}" && continue
+    undeclared+=("$p")
+  done
+  if (( ${#undeclared[@]} )); then
+    drift=1
+    warn "installed explicitly but NOT declared (${#undeclared[@]}):"
+    printf '      %s\n' "${undeclared[@]}"
+    printf '      fix: add to packages/%s.txt, or pacman -Rns / -D --asdeps\n' "$HOST"
+  else
+    ok "no undeclared explicit packages"
+  fi
+
+  # moved to nix but pacman still has it
+  stale=()
+  for p in "${migrated[@]}"; do
+    in_list "$p" "${installed[@]}" && stale+=("$p")
+  done
+  if (( ${#stale[@]} )); then
+    drift=1
+    warn "moved to nix but still installed via pacman (${#stale[@]}):"
+    printf '      %s\n' "${stale[@]}"
+    printf '      fix: ./bootstrap.sh   (it offers to remove them)\n'
+  else
+    ok "no migrated packages left on pacman"
+  fi
+
+  if (( drift )); then
+    printf '\n%sdrift detected%s\n' "$C_YELLOW" "$C_RESET"
+    exit 1
+  fi
+  printf '\n%sin sync%s\n' "$C_GREEN" "$C_RESET"
+  exit 0
+fi
 
 step "Bootstrapping host '$HOST' from $REPO"
 (( DRY )) && warn "dry run - nothing will be changed"
@@ -203,12 +289,6 @@ fi
 # ---------------------------------------------------------------------------
 # 4. pacman: the system half of the split
 # ---------------------------------------------------------------------------
-read_list() {
-  # strips comments and blank lines
-  [[ -f "$1" ]] || return 0
-  sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$1"
-}
-
 step "System packages (pacman)"
 
 if (( ! DO_PACMAN )); then
@@ -242,8 +322,15 @@ fi
 # ---------------------------------------------------------------------------
 step "Submodules"
 
-# `submodule status` prefixes uninitialised entries with '-'
-if ! git -C "$REPO" submodule status --recursive 2>/dev/null | grep -q '^-'; then
+# `submodule status` prefixes uninitialised entries with '-'. Capture the output
+# separately from the exit status: if git itself fails (dubious ownership, not a
+# repo, ...) an empty result would otherwise look identical to "nothing to do"
+# and we would silently skip initialising.
+if ! sub_status="$(git -C "$REPO" submodule status --recursive 2>&1)"; then
+  warn "could not read submodule status:"
+  printf '      %s\n' "$sub_status"
+  warn "run: git -C $REPO submodule update --init --recursive"
+elif ! grep -q '^-' <<<"$sub_status"; then
   skip "all submodules already initialised"
 else
   ok "initialising submodules"
@@ -358,6 +445,58 @@ else
     warn "nix-gc.timer not active - it is created by home-manager, so"
     warn "run 'systemctl --user daemon-reload' and re-check"
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# 10. root/system profile garbage collection
+#     home/nix-gc.nix only collects THIS user's profile. Root-owned system
+#     profile generations - created by nix upgrades and any root-level installs
+#     - accumulate unbounded and no user-level flake can reach them.
+#
+#     This unit lives in /etc/systemd/system, so unlike everything else here it
+#     does NOT roll back with a home-manager generation. Unavoidable for
+#     root-owned state.
+# ---------------------------------------------------------------------------
+step "System profile GC"
+
+GC_UNIT=/etc/systemd/system/nix-gc-system.service
+GC_TIMER=/etc/systemd/system/nix-gc-system.timer
+
+if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
+  skip "systemd not running"
+elif [[ -f "$GC_TIMER" ]] && systemctl is-enabled nix-gc-system.timer &>/dev/null; then
+  skip "nix-gc-system.timer already installed and enabled"
+elif (( DRY )); then
+  warn "would install and enable $GC_TIMER"
+else
+  ok "installing weekly system-profile GC timer"
+
+  sudo tee "$GC_UNIT" >/dev/null <<'UNIT'
+[Unit]
+Description=Collect old root/system nix profile generations
+Documentation=https://github.com/Miconen/.mico
+
+[Service]
+Type=oneshot
+ExecStart=/nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-older-than 30d
+UNIT
+
+  sudo tee "$GC_TIMER" >/dev/null <<'UNIT'
+[Unit]
+Description=Weekly root/system nix garbage collection
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now nix-gc-system.timer \
+    || warn "could not enable nix-gc-system.timer"
 fi
 
 # ---------------------------------------------------------------------------
