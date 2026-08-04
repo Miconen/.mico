@@ -51,23 +51,30 @@ one-off throwaway use; anything permanent goes in `home/common.nix`.
 ## Layout
 
 ```
+bootstrap.sh              one-command machine setup, idempotent
 flake.nix                 nixpkgs (unstable) + home-manager (master)
 home/
   common.nix              packages, session vars, fonts, nvim symlink
   zsh.nix                 programs.zsh: history, options, plugins, aliases
   starship.nix            Catppuccin Powerline prompt
-  git.nix                 programs.git
+  git.nix                 programs.git + programs.delta
   fzf.nix                 fd integration, Catppuccin palette, completion helpers
-  mise.nix                global node/python/go/rust
+  mise.nix                global node/python/go/rust + install activation hook
   tools.nix               bat, zoxide, direnv, keychain, verbatim configs
   nix-gc.nix              weekly GC user timer
 hosts/
-  arch.nix                laptop
+  arch.nix                laptop, incl. managed kitty config
   wsl.nix                 WSL (untested)
 config/
   zellij/                 verbatim KDL
   tmux/tmux.conf          verbatim
+  kitty/kitty.conf        verbatim, Maple Mono NF + Catppuccin
   bat/themes/             Catppuccin Mocha tmTheme
+packages/
+  common.txt              pacman packages for both hosts
+  arch.txt                pacman packages, laptop only
+  wsl.txt                 pacman packages, WSL only
+  migrated.txt            pacman packages that moved to nix
 .config/nvim              submodule -> Miconen/nvim
 ```
 
@@ -80,168 +87,102 @@ silent breakage for no functional gain. Those files are managed verbatim via
 
 ## Bootstrap on a new machine
 
-### 0. WSL only
+```sh
+sudo pacman -S --needed git
+git clone https://github.com/Miconen/.mico.git ~/.mico
+~/.mico/bootstrap.sh
+```
 
-In `/etc/wsl.conf` on the Windows side:
+That is the whole thing. The script is **idempotent** - re-running it is the
+intended way to apply changes to the system half of the setup, and every phase
+detects whether it has already been done.
+
+```
+./bootstrap.sh                 auto-detect host, prompt before anything destructive
+./bootstrap.sh --dry-run       print what would happen, change nothing
+./bootstrap.sh --host wsl      override host detection
+./bootstrap.sh --yes           unattended, no prompts
+./bootstrap.sh --no-pacman     skip all pacman work
+./bootstrap.sh --no-remove     install pacman packages but never remove any
+```
+
+Start with `--dry-run` on a machine you care about.
+
+### What it does
+
+| phase | action |
+| --- | --- |
+| Preflight | refuses to run as root, warns if the repo is not at `~/.mico`, warms the sudo timestamp once |
+| Store location | if `/` is btrfs and `/nix` does not exist, creates a dedicated subvolume first |
+| Nix | installs upstream Nix multi-user via `nix-installer`; on WSL, fails early with instructions if systemd is off |
+| Daemon settings | appends `auto-optimise-store = true` to `/etc/nix/nix.conf`, which a flake cannot set |
+| System packages | `pacman -S --needed` from `packages/common.txt` + `packages/<host>.txt` |
+| Submodules | initialises the nvim submodule, rewriting SSH URLs to HTTPS so it works before you have keys |
+| Git identity | prompts for name/email and writes `~/.gitconfig.local`, which is never committed |
+| home-manager | activates `.#<host>`, which also installs the mise toolchains |
+| Reconcile pacman | offers to remove `packages/migrated.txt` entries, **after** activation so the nix replacements already exist |
+| User services | enables `podman.socket`, reports on `nix-gc.timer` |
+
+Two design choices worth knowing:
+
+- **pacman removal happens last, and asks.** Removing `git` before nix's `git`
+  is on `PATH` would be an unpleasant way to discover an ordering bug. If pacman
+  refuses because of dependencies, the script falls back to
+  `pacman -D --asdeps`, which leaves the package installed but no longer
+  explicitly wanted.
+- **`mise install` is not in the script.** It is a home-manager activation hook
+  in `home/mise.nix`, so it runs on every `hms` and there is nothing to
+  remember. It is a fast no-op when everything is present, and non-fatal when
+  offline. Skip it with `MICO_SKIP_MISE_INSTALL=1`.
+
+### The system half is declarative too
+
+`packages/*.txt` are inputs, not dumps of whatever happens to be installed:
+
+| file | contents |
+| --- | --- |
+| `common.txt` | both hosts: base, `sudo`, `zsh` binary, `vim`/`nano` recovery editors, `openssh`, `podman` |
+| `arch.txt` | laptop only: hyprland, plasma, sddm, pipewire, GPU drivers, kitty, firefox |
+| `wsl.txt` | WSL only: `vulkan-dzn`, `wsl2-ssh-agent`, `paru` |
+| `migrated.txt` | packages that moved to nix and should be removed from pacman |
+
+Add a line, re-run `./bootstrap.sh`, done. AUR entries (`wsl2-ssh-agent`) still
+need `paru -S` - plain pacman cannot fetch them, and the script warns rather
+than failing.
+
+### WSL prerequisites
+
+Before running anything, on the Windows side in `/etc/wsl.conf`:
 
 ```ini
 [boot]
 systemd=true
 ```
 
-`systemd=true` is **required** — the multi-user nix daemon cannot run without
-it. Optionally add:
+Required - the multi-user nix daemon cannot run without it. Optionally:
 
 ```ini
 [interop]
 appendWindowsPath=false
 ```
 
-This stops Windows `PATH` entries from shadowing nix binaries, at the cost of
-losing `code`, `explorer.exe` etc. from the shell. Then `wsl --shutdown`.
+Stops Windows `PATH` entries from shadowing nix binaries, at the cost of losing
+`code` and `explorer.exe` from the shell. Then `wsl --shutdown`.
 
-### 1. Arch laptop only: give `/nix` its own btrfs subvolume
+### Validating before you activate
 
-Root is btrfs (subvolume `@`). Do this **before** installing nix, or you will be
-moving the whole store later:
-
-```sh
-sudo btrfs subvolume create /nix
-```
-
-btrfs snapshots are not recursive, so a nested subvolume keeps the store — which
-grows to many GB on unstable — out of any root snapshots. WSL uses ext4 in a
-VHDX and has no subvolumes, so it skips this step entirely.
-
-### 2. Install Nix
-
-```sh
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
-  | sh -s -- install linux --no-confirm
-```
-
-Do **not** pass `--determinate`; that installs Determinate's fork rather than
-upstream Nix.
-
-Verify:
-
-```sh
-systemctl status nix-daemon.socket
-grep experimental-features /etc/nix/nix.conf   # expect: nix-command flakes
-ls /etc/profile.d/nix.sh
-```
-
-> **Arch note.** The installer writes a hook to `/etc/zshrc`, which Arch's zsh
-> never reads — Arch builds zsh with `--enable-etcdir=/etc/zsh`. Login shells
-> still work because Arch's `/etc/zsh/zprofile` sources `/etc/profile`, which
-> sources `/etc/profile.d/nix.sh`. If `nix` is not found, source it manually for
-> the current shell:
->
-> ```sh
-> . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-> ```
-
-### 3. Enable store deduplication (needs root, cannot be done from this flake)
-
-```sh
-echo 'auto-optimise-store = true' | sudo tee -a /etc/nix/nix.conf
-sudo systemctl restart nix-daemon
-```
-
-Garbage collection itself is handled by the `nix-gc` user timer in this repo.
-
-### 4. Get the repo
-
-If `~/.mico` already exists and is stowed, **unstow first, while the old files
-are still present**:
+If you would rather not let the script activate blindly, do the switch by hand:
 
 ```sh
 cd ~/.mico
-stow -D .          # removes the symlinks this repo used to create
-git fetch origin
-git checkout main  # or the migration branch
-git submodule update --init --recursive
+nix eval .#homeConfigurations.arch.activationPackage.drvPath   # evaluates
+nix build .#homeConfigurations.arch.activationPackage --no-link  # builds
+./bootstrap.sh --no-remove
 ```
 
-Order matters. Checking out the new tree before unstowing leaves dangling
-symlinks in `$HOME` that home-manager then has to fight.
-
-On a genuinely new machine:
-
-```sh
-git clone --recursive git@github.com:Miconen/.mico.git ~/.mico
-```
-
-### 5. Validate before activating
-
-Flakes only see git-tracked files, so commit or `git add` anything new first.
-This forces full module evaluation without building, which catches bad option
-names immediately:
-
-```sh
-cd ~/.mico
-nix eval .#homeConfigurations.arch.activationPackage.drvPath
-```
-
-### 6. Activate
-
-```sh
-nix run github:nix-community/home-manager -- switch --flake ~/.mico#arch -b backup
-```
-
-Use `#wsl` on WSL. `-b backup` renames anything that would be clobbered instead
-of failing.
-
-**Open a new terminal and confirm it works before closing the old one.** This is
-the step that can leave you without a usable shell.
-
-### 7. Remove the pacman duplicates
-
-Only after verifying that `which -a git eza zoxide lazygit neovim` resolve into
-`~/.nix-profile/bin`:
-
-```sh
-sudo pacman -Rns eza fastfetch git htop keychain lazygit neovim wget zoxide
-```
-
-If pacman refuses because something depends on `git`, demote it instead of
-removing:
-
-```sh
-sudo pacman -D --asdeps git
-```
-
-Then add what pacman should still own explicitly:
-
-```sh
-sudo pacman -S --asexplicit openssh podman
-systemctl --user enable --now podman.socket   # for DOCKER_HOST
-```
-
-### 8. Set your git identity (untracked, per machine)
-
-```sh
-git config --file ~/.gitconfig.local user.name  "Miconen"
-git config --file ~/.gitconfig.local user.email "you@example.com"
-```
-
-### 9. Set the terminal font
-
-The Catppuccin Powerline prompt needs a Nerd Font. `maple-mono.NF` is installed
-by this flake and exposed through fontconfig, so point kitty at it:
-
-```conf
-font_family Maple Mono NF
-```
-
-### 10. Install the language toolchains
-
-The flake declares them, but mise still has to fetch them:
-
-```sh
-mise install
-mise ls
-```
+`nix eval` catches bad option names; `nix build` catches build-time failures
+that evaluation cannot see, such as the starship preset lookup and
+`bat cache --build`.
 
 ---
 

@@ -1,5 +1,6 @@
 {
   pkgs,
+  lib,
   config,
   username,
   ...
@@ -100,4 +101,14 @@
   # Requires: git -C ~/.mico submodule update --init --recursive
   xdg.configFile."nvim".source =
     config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.mico/.config/nvim";
+
+  # The symlink above happily points at an empty directory if the submodule was
+  # never initialised, which shows up as "neovim has no config" rather than as
+  # an error. Warn loudly instead.
+  home.activation.checkNvimSubmodule = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    nvimSrc="${config.home.homeDirectory}/.mico/.config/nvim"
+    if [ -z "$(ls -A "$nvimSrc" 2>/dev/null)" ]; then
+      warnEcho "nvim submodule is empty. Run: git -C ~/.mico submodule update --init --recursive"
+    fi
+  '';
 }

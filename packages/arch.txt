@@ -1,0 +1,83 @@
+# Packages pacman owns on the Arch laptop only.
+#
+# Everything here is hardware, desktop, or GUI - the categories nix explicitly
+# does not manage in this setup.
+
+# CPU microcode
+amd-ucode
+
+# Boot
+efibootmgr
+
+# GPU / video acceleration.
+# NOTE: this is the full grab-bag archinstall produces. If you know which GPU
+# this laptop has, pruning the other vendors is safe and saves a few hundred MB.
+vulkan-intel
+vulkan-radeon
+vulkan-nouveau
+intel-media-driver
+libva-intel-driver
+xf86-video-amdgpu
+xf86-video-ati
+xf86-video-nouveau
+
+# Wayland compositor and session
+hyprland
+uwsm
+xdg-desktop-portal-hyprland
+qt5-wayland
+qt6-wayland
+xdg-utils
+
+# Desktop environment / login
+plasma-meta
+sddm
+polkit-kde-agent
+dolphin
+
+# Terminal emulator. Config is managed by nix in hosts/arch.nix.
+kitty
+
+# Launcher, notifications, screenshots
+wofi
+dunst
+grim
+slurp
+
+# Audio
+pipewire
+pipewire-alsa
+pipewire-jack
+pipewire-pulse
+wireplumber
+gst-plugin-pipewire
+libpulse
+
+# Network
+networkmanager
+network-manager-applet
+wpa_supplicant
+
+# Bluetooth
+bluez
+bluez-utils
+
+# Printing
+cups
+cups-pk-helper
+system-config-printer
+
+# Hardware / misc
+smartmontools
+zram-generator
+fuse2
+
+# Browser
+firefox
+
+# AUR helper
+paru
+
+# Still used to manage nothing in particular now that dotfiles moved to nix,
+# but harmless to keep around while the migration settles.
+stow

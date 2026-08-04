@@ -16,4 +16,9 @@
 
   # keychain handles ssh-agent here. It is enabled by default in home/tools.nix;
   # hosts/wsl.nix turns it off in favour of wsl2-ssh-agent.
+
+  # kitty's binary comes from pacman (GUI), but its config is managed here so
+  # the Nerd Font and Catppuccin theme are not a manual post-install step.
+  # WSL does not get this - it uses Windows Terminal.
+  xdg.configFile."kitty/kitty.conf".source = ../config/kitty/kitty.conf;
 }

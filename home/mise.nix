@@ -1,4 +1,6 @@
 {
+  pkgs,
+  lib,
   ...
 }:
 {
@@ -31,4 +33,21 @@
       };
     };
   };
+
+  # Declaring a tool does not fetch it - `mise ls` would show "(missing)" until
+  # someone remembers to run `mise install`. This makes the fetch part of
+  # activation, so `hms` alone is sufficient and there is no manual step.
+  #
+  # Runs after writeBoundary so ~/.config/mise/config.toml is already in place.
+  # It is a fast no-op once everything is installed, and deliberately non-fatal:
+  # activating while offline should warn, not fail the whole generation.
+  #
+  # Set MICO_SKIP_MISE_INSTALL=1 to skip (useful on a metered connection).
+  home.activation.miseInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if [ -n "''${MICO_SKIP_MISE_INSTALL:-}" ]; then
+      verboseEcho "Skipping mise install (MICO_SKIP_MISE_INSTALL is set)"
+    elif ! ( export MISE_YES=1; run --quiet ${pkgs.mise}/bin/mise install ); then
+      warnEcho "mise install failed - offline? Run 'mise install' when connected."
+    fi
+  '';
 }

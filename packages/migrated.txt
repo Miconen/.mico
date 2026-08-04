@@ -1,0 +1,31 @@
+# Packages that MOVED to nix and should no longer be installed by pacman.
+#
+# bootstrap.sh removes any of these that are still present, but only after
+# confirming, and only after home-manager has successfully activated - so the
+# nix replacement is guaranteed to already be on PATH.
+#
+# `git` is the risky one: other packages may depend on it. If pacman refuses to
+# remove it, bootstrap demotes it with `pacman -D --asdeps git` instead, which
+# leaves it installed but no longer explicitly wanted.
+
+eza
+fastfetch
+git
+htop
+keychain
+lazygit
+neovim
+wget
+zoxide
+
+# Never installed on the laptop, but present in the old WSL manifest
+github-cli
+hub
+lazydocker
+less
+mise
+nvm
+ripgrep
+unzip
+zellij
+fzf

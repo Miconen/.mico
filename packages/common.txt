@@ -1,0 +1,36 @@
+# Packages pacman owns on every host.
+#
+# This is a declarative INPUT, not a dump of what happens to be installed.
+# bootstrap.sh installs these with `pacman -S --needed`, so adding a line here
+# and re-running is safe and idempotent.
+#
+# Anything that is a CLI tool belongs in home/common.nix instead. See the split
+# rule in README.md.
+
+# Base system
+base
+base-devel
+sudo
+linux
+linux-firmware
+mkinitcpio
+
+# Filesystem / disk
+btrfs-progs
+
+# The login shell binary. Its CONFIG is managed by nix, but the binary must be
+# a stable system path - a /nix/store login shell can lock you out after a GC.
+zsh
+
+# Recovery editors. These must keep working even if the nix profile is broken,
+# which is exactly why neovim (from nix) is not enough.
+vim
+nano
+
+# SSH client and daemon. System integration, and keychain depends on it.
+openssh
+
+# Container runtime. A system service, which nix is poor at outside NixOS.
+# DOCKER_HOST and the docker->podman alias are set in home/common.nix.
+podman
+podman-compose
