@@ -1,0 +1,10 @@
+# nix build outputs
+result
+result-*
+
+# direnv
+.direnv/
+
+# machine-local, never committed (this repo is public)
+*.local
+.gitconfig.local

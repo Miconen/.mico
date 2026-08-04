@@ -154,8 +154,25 @@ ui {
     }
 }
 
-// https://github.com/zellij-org/zellij/tree/main/example/themes
-theme "dracula"
+// Catppuccin Mocha, defined inline rather than relying on a built-in theme
+// name, so it works regardless of which themes a given zellij version ships.
+themes {
+    catppuccin-mocha {
+        bg "#585b70"
+        fg "#cdd6f4"
+        red "#f38ba8"
+        green "#a6e3a1"
+        blue "#89b4fa"
+        yellow "#f9e2af"
+        magenta "#f5c2e7"
+        orange "#fab387"
+        cyan "#89dceb"
+        black "#181825"
+        white "#cdd6f4"
+    }
+}
+
+theme "catppuccin-mocha"
 
 plugins {
     compact-bar { path "compact-bar"; }
