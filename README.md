@@ -125,6 +125,12 @@ sets. Restart kitty so fontconfig is re-read.
 **`ls` errors on a filename.** eza wants `--icons=always`, with the `=`. Space
 separated makes the value a path argument.
 
+**Clipboard does nothing in WSL.** `pbcopy`/`pbpaste` prefer WSLg's
+`wl-copy`/`wl-paste` and fall back to `clip.exe`/`powershell.exe` by absolute
+path, since `appendWindowsPath=false` takes them off PATH. Neovim autodetects
+wl-clipboard when `WAYLAND_DISPLAY` is set; without WSLg, point `g:clipboard` at
+`pbcopy`/`pbpaste`.
+
 **`pacman -Rns git` refuses.** Something depends on it.
 `sudo pacman -D --asdeps git` instead.
 
