@@ -12,16 +12,8 @@
     #   git config --file ~/.gitconfig.local user.email "..."
     includes = [ { path = "${config.home.homeDirectory}/.gitconfig.local"; } ];
 
-    # Replaces the old `[core] pager` behaviour and installs the delta package.
-    delta = {
-      enable = true;
-      options = {
-        navigate = true;
-        line-numbers = true;
-      };
-    };
-
-    extraConfig = {
+    # Was `extraConfig`, renamed to `settings` upstream.
+    settings = {
       core.editor = "nvim";
 
       init.defaultBranch = "main";
@@ -51,6 +43,20 @@
         colorMoved = "default";
         algorithm = "histogram";
       };
+    };
+  };
+
+  # delta is its own top-level module now; it used to be `programs.git.delta`.
+  programs.delta = {
+    enable = true;
+
+    # Being implicit here is deprecated - enabling delta while programs.git is
+    # enabled used to wire itself up automatically and now warns.
+    enableGitIntegration = true;
+
+    options = {
+      navigate = true;
+      line-numbers = true;
     };
   };
 }

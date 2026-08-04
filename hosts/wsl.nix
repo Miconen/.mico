@@ -28,7 +28,7 @@
   # Windows Git Credential Manager. Only valid inside WSL; on the laptop this
   # path does not exist, which is why the old unconditional .gitconfig entry
   # was broken there.
-  programs.git.extraConfig.credential.helper =
+  programs.git.settings.credential.helper =
     "/mnt/c/Program Files/Git/mingw64/bin/git-credential-manager.exe";
 
   programs.zsh.initContent = lib.mkOrder 550 ''

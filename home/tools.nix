@@ -43,7 +43,8 @@
     enable = lib.mkDefault true;
     enableZshIntegration = true;
     keys = [ "id_ed25519" ];
-    agents = [ "ssh" ];
+    # `agents` is deprecated as of keychain 2.9.0, which detects the agent type
+    # itself. Setting it only produces a warning now.
   };
 
   # ---------------------------------------------------------------------------
