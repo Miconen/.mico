@@ -258,6 +258,72 @@ home-manager generations           # find the previous one
 
 ---
 
+## Editing this config
+
+```sh
+nvim ~/.mico/home/zsh.nix   # or the `zshconf` alias
+hms                         # switch
+exec zsh                    # reload the current shell
+```
+
+Three things to know:
+
+1. **Flakes read the git tree, and untracked files are silently excluded.**
+   Editing an already-tracked file works uncommitted - you just get a harmless
+   `warning: Git tree ... is dirty`. But when you *add* a file you must
+   `git add` it, or your change will appear to do nothing.
+
+2. **`exec zsh` is safe inside zellij, not outside it.** `initContent` at order
+   500 execs zellij whenever `$ZELLIJ` is unset. Inside a pane the guard skips
+   and you get a fresh shell; in a bare terminal you get a multiplexer.
+
+3. **Keep a second terminal open while editing `zsh.nix`.** It is the one file
+   where a mistake can leave you without a working shell.
+
+### Seeing the result without switching
+
+This prints the fully merged, order-resolved `.zshrc`, which is the only
+reliable way to confirm `lib.mkOrder` placed something where you expected:
+
+```sh
+nix eval --raw .#homeConfigurations.arch.config.programs.zsh.initContent | less
+```
+
+Inspecting individual values:
+
+```sh
+nix eval .#homeConfigurations.arch.config.programs.zsh.shellAliases.ls
+nix eval .#homeConfigurations.arch.config.home.packages --apply 'map (p: p.name)'
+```
+
+Building without activating, which catches build-time failures that `nix eval`
+cannot see (the starship preset lookup and the `bat cache --build` step):
+
+```sh
+nix build .#homeConfigurations.arch.activationPackage --no-link
+```
+
+### Order slots used by home-manager
+
+When adding to `initContent`, these are already taken upstream, so pick a slot
+deliberately rather than reusing one:
+
+| order | what |
+| --- | --- |
+| 500 | `mkBefore`, earliest - zellij autostart lives here |
+| 510-540 | path/fpath setup, local variables |
+| 560 | plugin dirs added to `fpath` |
+| 570 | `compinit` |
+| 900 | plugin sourcing |
+| 1000 | default - general config |
+| 1100 | `shellAliases` |
+| 1150 | directory hashes |
+| 1200 | syntax highlighting |
+| 1300 | fzf completion helpers (this repo) |
+| 1500 | `mkAfter`, last - keybindings must go here, after plugins define widgets |
+
+---
+
 ## Changes from the old stow setup
 
 Fixed along the way:
