@@ -56,7 +56,7 @@
 
     shellAliases = {
       # File system
-      ls = "eza -lh --group-directories-first --icons";
+      ls = "eza -lh --group-directories-first --icons always";
       lsa = "ls -a";
       lt = "eza --tree --level=2 --long --icons --git";
       lta = "lt -a";
