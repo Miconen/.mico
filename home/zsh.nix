@@ -1,4 +1,5 @@
 {
+  pkgs,
   lib,
   config,
   ...
@@ -15,20 +16,15 @@
     enableCompletion = true;
     autocd = false;
 
-    # NOTE: syntaxHighlighting, autosuggestion and plugins are deliberately NOT
-    # used here. The four plugins are tracked as git submodules under
-    # .config/zsh/ and sourced from the working tree in initContent below.
-    #
-    # Submodule SHAs pin them exactly, the same way flake.lock pins nixpkgs, so
-    # this is reproducible - but it is a SECOND update mechanism:
-    #
-    #   nix flake update                  bumps nixpkgs + home-manager
-    #   git submodule update --remote     bumps these four plugins
-    #
-    # To move them back under home-manager, delete the submodules and restore:
-    #   syntaxHighlighting.enable = true;
-    #   autosuggestion = { enable = true; strategy = [ "history" "completion" ]; };
-    #   plugins = [ { name = ...; src = pkgs.zsh-...; file = ...; } ];
+    syntaxHighlighting.enable = true;
+
+    autosuggestion = {
+      enable = true;
+      strategy = [
+        "history"
+        "completion"
+      ];
+    };
 
     history = {
       # Was 1000 in the old config, which is very small.
@@ -42,6 +38,22 @@
       ignoreSpace = true;
       share = true;
     };
+
+    # home-manager has no `historySubstringSearch` option, so these two are
+    # explicit plugin entries. `file` is relative to the package root.
+    # Sourced at order 900, before aliases (1100) and highlighting (1200).
+    plugins = [
+      {
+        name = "zsh-history-substring-search";
+        src = pkgs.zsh-history-substring-search;
+        file = "share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.plugin.zsh";
+      }
+      {
+        name = "you-should-use";
+        src = pkgs.zsh-you-should-use;
+        file = "share/zsh/plugins/you-should-use/you-should-use.plugin.zsh";
+      }
+    ];
 
     shellAliases = {
       # File system
@@ -147,40 +159,6 @@
         zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
       '')
 
-      # ---- order 900: plugins from the git submodules ------------------------
-      # Order mirrors what home-manager does for its own plugin handling: after
-      # compinit (570), before aliases (1100).
-      (lib.mkOrder 900 ''
-        ZSH_PLUGIN_DIR="${config.home.homeDirectory}/.mico/.config/zsh"
-
-        ZSH_AUTOSUGGEST_STRATEGY=(history completion)
-
-        for _p in \
-          "$ZSH_PLUGIN_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh" \
-          "$ZSH_PLUGIN_DIR/zsh-history-substring-search/zsh-history-substring-search.zsh" \
-          "$ZSH_PLUGIN_DIR/zsh-you-should-use/you-should-use.plugin.zsh"; do
-          if [[ -f "$_p" ]]; then
-            source "$_p"
-          else
-            print -u2 "zsh: plugin missing: $_p (run: git -C ~/.mico submodule update --init)"
-          fi
-        done
-        unset _p
-      '')
-
-      # ---- order 1200: syntax highlighting -----------------------------------
-      # Must load after every custom widget has been defined, which is why
-      # home-manager's own module also uses 1200 rather than sourcing it with
-      # the other plugins.
-      # https://github.com/zsh-users/zsh-syntax-highlighting#faq
-      (lib.mkOrder 1200 ''
-        if [[ -f "$ZSH_PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-          source "$ZSH_PLUGIN_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-        else
-          print -u2 "zsh: plugin missing: zsh-syntax-highlighting (run: git -C ~/.mico submodule update --init)"
-        fi
-      '')
-
       # ---- last: keybindings ------------------------------------------------
       # Must run after plugin sourcing, otherwise the history-substring-search
       # and autosuggest widgets do not exist yet and bindkey silently fails.
@@ -191,16 +169,4 @@
       '')
     ];
   };
-
-  # The plugins are only present if the submodules were initialised. Sourcing
-  # already prints to stderr at shell startup, but warn at activation too so it
-  # is caught before you open a new terminal and wonder why nothing highlights.
-  home.activation.checkZshPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    for p in zsh-autosuggestions zsh-history-substring-search \
-             zsh-syntax-highlighting zsh-you-should-use; do
-      if [ -z "$(ls -A "${config.home.homeDirectory}/.mico/.config/zsh/$p" 2>/dev/null)" ]; then
-        warnEcho "zsh plugin submodule '$p' is empty. Run: git -C ~/.mico submodule update --init --recursive"
-      fi
-    done
-  '';
 }

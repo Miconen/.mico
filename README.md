@@ -76,7 +76,6 @@ packages/
   wsl.txt                 pacman packages, WSL only
   migrated.txt            pacman packages that moved to nix
 .config/nvim              submodule -> Miconen/nvim
-.config/zsh/              submodules: the four zsh plugins, sourced by zsh.nix
 ```
 
 Not everything is expressed as Nix attributes. zellij's config is ~170 lines of
@@ -118,7 +117,7 @@ Start with `--dry-run` on a machine you care about.
 | Nix | installs upstream Nix multi-user via `nix-installer`; on WSL, fails early with instructions if systemd is off |
 | Daemon settings | appends `auto-optimise-store = true` to `/etc/nix/nix.conf`, which a flake cannot set |
 | System packages | `pacman -S --needed` from `packages/common.txt` + `packages/<host>.txt` |
-| Submodules | initialises all five submodules (nvim + four zsh plugins), rewriting SSH URLs to HTTPS so it works before you have keys |
+| Submodules | initialises the nvim submodule, rewriting SSH URLs to HTTPS so it works before you have keys |
 | Git identity | prompts for name/email and writes `~/.gitconfig.local`, which is never committed |
 | home-manager | activates `.#<host>`, which also installs the mise toolchains |
 | Reconcile pacman | offers to remove `packages/migrated.txt` entries, **after** activation so the nix replacements already exist |
@@ -223,11 +222,9 @@ Use `readlink -f`, not plain `readlink`. home-manager points
 *that* points at the working tree. Plain `readlink` shows only the first hop and
 looks alarmingly like an immutable store path when it isn't one.
 
-The plugin checks matter because the zsh plugins are sourced with a
-`[[ -f ... ]]` guard from the submodule working tree. An uninitialised submodule
-means no highlighting, no autosuggestions and no substring search - so
-`zsh.nix` prints to stderr at shell startup and warns again at activation,
-rather than failing quietly.
+The plugin checks matter because home-manager sources plugins with
+`[[ -f ... ]] && source`, so a wrong `file` path fails **silently** - no error,
+the widgets just never exist and `bindkey` quietly binds nothing.
 
 ---
 
@@ -241,20 +238,8 @@ home-manager generations   # list previous generations
 nix shell nixpkgs#foo      # one-off tool, not persisted
 ```
 
-**There are two update mechanisms**, because the zsh plugins are git submodules
-rather than nixpkgs packages:
-
-```sh
-nix flake update                       # nixpkgs + home-manager, pinned by flake.lock
-git submodule update --remote          # the 4 zsh plugins + nvim, pinned by SHA
-```
-
-Both are exact pins, so reproducibility is intact - but bumping one does not
-bump the other. After either, run `hms`.
-
-Note that `--remote` follows the `branch` in `.gitmodules`. All four plugin
-repos use `master`; only `Miconen/nvim` uses `main`. The original `.gitmodules`
-declared `main` for everything, which silently did nothing for the plugins.
+`nix flake update` covers everything except the nvim submodule, which is pinned
+by SHA and bumped with `git submodule update --remote`. Run `hms` after either.
 
 Rolling back a bad activation:
 
@@ -361,6 +346,9 @@ Removed:
   via `~/.cargo/env`. Both fought mise for `PATH`. mise now owns node, python,
   go and rust.
 - **powerlevel10k** submodule and `.p10k.zsh`, replaced by starship.
+- Four zsh plugin submodules, replaced by nixpkgs packages. home-manager has no
+  `historySubstringSearch` option, so that one and `you-should-use` are explicit
+  `programs.zsh.plugins` entries.
 - The `backup-package-list` service, timer and script, plus
   `packages/packages.txt`. This flake is the source of truth now.
 - The unused `tokyo-night` zellij themes.
@@ -376,11 +364,6 @@ Removed:
   at all. GC is a hand-written user timer in `home/nix-gc.nix`.
 - **`auto-optimise-store` cannot be set from here.** It is a daemon setting and
   needs root, so `bootstrap.sh` does it.
-- **The zsh plugins are git submodules, not nixpkgs packages.** So
-  `programs.zsh.syntaxHighlighting`, `.autosuggestion` and `.plugins` are all
-  unused, and `zsh.nix` sources the four plugins from the working tree instead.
-  `home/zsh.nix` documents how to move them back under home-manager if you
-  change your mind.
 - **`~/.zshrc` is a read-only store symlink now.** Editing it does nothing. Use
   the `zshconf` alias, which opens `home/zsh.nix`.
 - **fastfetch runs in every interactive shell**, which means every new zellij
