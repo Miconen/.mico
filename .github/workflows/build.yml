@@ -49,13 +49,5 @@ jobs:
 
       - uses: DeterminateSystems/nix-installer-action@main
 
-      - name: nixfmt --check
-        # An explicit file list, because passing a directory to nixfmt is not
-        # reliably supported across versions.
-        run: nix develop --command bash -c 'nixfmt --check $(git ls-files "*.nix")'
-
-      - name: statix
-        run: nix develop --command statix check
-
-      - name: deadnix
-        run: nix develop --command deadnix --fail
+      - name: lint
+        run: ./ci/lint.sh
