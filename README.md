@@ -146,6 +146,28 @@ mise ls
 Want: nix paths first, `history completion`, `history-substring-search-up`,
 `zdiff3`, your email, `/home/miso/.mico/.config/nvim`, non-zero, no `(missing)`.
 
+## zellij
+
+```
+Ctrl-g   lock / unlock (pass keys through to the terminal)
+Ctrl-p   pane      Ctrl-t   tab       Ctrl-n   resize
+Ctrl-s   scroll    Ctrl-m   move      Ctrl-o   session
+Alt-d    detach            Ctrl-q   quit (DESTROYS the session)
+Alt-[ / Alt-]     cycle swap layouts
+Alt-h/j/k/l       move focus        Alt-n   new pane
+zt                jump to / create a tab named after the current project
+```
+
+Session mode (`Ctrl-o`): `d` detach, `w` session manager, `l` layout manager,
+`c` configuration, `p` plugin manager, `a` about.
+
+**Detach, do not quit.** `Alt-d` leaves the session running so
+`session_serialization` can resurrect its panes and cwds; `Ctrl-q` tears it down.
+The config had no detach binding at all until recently, because
+`clear-defaults=true` drops zellij's whole `session` mode along with it.
+
+`ZELLIJ_SKIP=1` starts a shell without attaching, for when you need a bare shell.
+
 ## Fixes
 
 **Plugins silently don't load.** home-manager sources them with

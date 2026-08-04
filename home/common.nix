@@ -50,6 +50,11 @@
       htop
       fastfetch
 
+      # Wayland clipboard. Needed for neovim's "+y on Hyprland and for anything
+      # that shells out to a clipboard helper. The laptop previously had no
+      # clipboard tool at all - wl-clipboard was only declared for WSL.
+      wl-clipboard
+
       # git / dev
       gh
       lazygit

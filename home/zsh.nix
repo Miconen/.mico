@@ -129,7 +129,9 @@
         #   -z $ZELLIJ     : don't nest sessions
         #   -z SSH_CONNECTION : don't hijack remote shells
         #   TERM != dumb   : don't break editors/tooling that spawn a shell
-        if [[ -o interactive && -z "$ZELLIJ" && -z "$SSH_CONNECTION" && "$TERM" != "dumb" ]]; then
+        # ZELLIJ_SKIP=1 gives a bare shell, useful when debugging the shell config
+        # itself or running something that dislikes a multiplexer.
+        if [[ -o interactive && -z "$ZELLIJ" && -z "$ZELLIJ_SKIP" && -z "$SSH_CONNECTION" && "$TERM" != "dumb" ]]; then
           if command -v zellij >/dev/null; then
             # attach --create reuses one persistent session instead of starting a
             # fresh one per terminal, which is what makes session_serialization
@@ -171,6 +173,25 @@
 
         # fzf-tab requires the native menu to be OFF; `menu select` fights it and
         # the two together break completion entirely.
+        # Jump to, or create, a zellij tab named after the current project.
+        #
+        # A per-project *session* helper would be unreachable: .zshrc attaches to
+        # the "main" session before you ever get a prompt, and `zellij attach`
+        # refuses to run from inside a session. Tabs work from within one.
+        zt() {
+          if [[ -z "$ZELLIJ" ]]; then
+            print -u2 "zt: not inside a zellij session"
+            return 1
+          fi
+          local root name
+          root="$(git rev-parse --show-toplevel 2>/dev/null)" || root="$PWD"
+          name="''${root:t}"
+          # go-to-tab-name has no --cwd, so try jumping to an existing tab first
+          # and only fall back to creating one, which is the path that sets cwd.
+          zellij action go-to-tab-name "$name" 2>/dev/null \
+            || zellij action new-tab --name "$name" --cwd "$root"
+        }
+
         zstyle ':completion:*' menu no
         zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 

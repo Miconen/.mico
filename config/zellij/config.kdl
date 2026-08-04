@@ -111,10 +111,58 @@ keybinds clear-defaults=true {
         bind "Esc" { UndoRenamePane; SwitchToMode "Pane"; }
     }
 
+    // Session mode. This whole block was missing: `clear-defaults=true` drops
+    // zellij's built-in `session` mode, and with it Detach and every plugin
+    // launcher. The only way out of a session was Ctrl-q, which QUITS and
+    // destroys it - so session_serialization had nothing to resurrect.
+    session {
+        bind "Ctrl o" { SwitchToMode "Normal"; }
+        bind "d" { Detach; }
+        // Session switcher/creator/renamer. The single most useful plugin.
+        bind "w" {
+            LaunchOrFocusPlugin "session-manager" {
+                floating true
+                move_to_focused_tab true
+            }
+            SwitchToMode "Normal"
+        }
+        bind "l" {
+            LaunchOrFocusPlugin "zellij:layout-manager" {
+                floating true
+                move_to_focused_tab true
+            }
+            SwitchToMode "Normal"
+        }
+        bind "c" {
+            LaunchOrFocusPlugin "configuration" {
+                floating true
+                move_to_focused_tab true
+            }
+            SwitchToMode "Normal"
+        }
+        bind "p" {
+            LaunchOrFocusPlugin "plugin-manager" {
+                floating true
+                move_to_focused_tab true
+            }
+            SwitchToMode "Normal"
+        }
+        bind "a" {
+            LaunchOrFocusPlugin "zellij:about" {
+                floating true
+                move_to_focused_tab true
+            }
+            SwitchToMode "Normal"
+        }
+    }
+
     // All modes but locked
     shared_except "locked" {
         bind "Ctrl g" { SwitchToMode "Locked"; }
         bind "Ctrl q" { Quit; }
+        // One-keystroke detach. Detaching leaves the session running so
+        // session_serialization can resurrect it; Ctrl-q destroys it instead.
+        bind "Alt d" { Detach; }
         bind "Alt n" { NewPane; }
         bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
         bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
@@ -145,6 +193,9 @@ keybinds clear-defaults=true {
     }
     shared_except "move" "locked" {
         bind "Ctrl m" { SwitchToMode "Move"; }
+    }
+    shared_except "session" "locked" {
+        bind "Ctrl o" { SwitchToMode "Session"; }
     }
 }
 
@@ -190,6 +241,9 @@ default_layout "default"
 session_serialization true
 // Whether pane viewports are serialized along with the session, default is false
 serialize_pane_viewport true
+
+// Stop the release-notes popup on every zellij upgrade.
+show_release_notes false
 
 on_force_close "quit"
 pane_frames false

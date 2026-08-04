@@ -59,8 +59,9 @@ in
   # Clipboard. wl-clipboard gives wl-copy/wl-paste, which neovim autodetects
   # when WAYLAND_DISPLAY is set under WSLg - no g:clipboard config needed.
   # pbcopy/pbpaste are the portable entry points that work either way.
+  # wl-clipboard itself is declared in home/common.nix, since the Arch host needs
+  # it too. Only the wrappers are WSL-specific.
   home.packages = [
-    pkgs.wl-clipboard
     pbcopy
     pbpaste
   ];
