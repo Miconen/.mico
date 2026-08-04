@@ -173,24 +173,27 @@
 
         # fzf-tab requires the native menu to be OFF; `menu select` fights it and
         # the two together break completion entirely.
-        # Jump to, or create, a zellij tab named after the current project.
+        # Name the zellij tab after the current project, automatically.
         #
-        # A per-project *session* helper would be unreachable: .zshrc attaches to
-        # the "main" session before you ever get a prompt, and `zellij attach`
-        # refuses to run from inside a session. Tabs work from within one.
-        zt() {
-          if [[ -z "$ZELLIJ" ]]; then
-            print -u2 "zt: not inside a zellij session"
-            return 1
-          fi
-          local root name
-          root="$(git rev-parse --show-toplevel 2>/dev/null)" || root="$PWD"
-          name="''${root:t}"
-          # go-to-tab-name has no --cwd, so try jumping to an existing tab first
-          # and only fall back to creating one, which is the path that sets cwd.
-          zellij action go-to-tab-name "$name" 2>/dev/null \
-            || zellij action new-tab --name "$name" --cwd "$root"
-        }
+        # Replaces a manual `zt` command: a chpwd hook means tab names just track
+        # wherever you are, with nothing to remember and no keybind.
+        if [[ -n "$ZELLIJ" ]]; then
+          autoload -Uz add-zsh-hook
+
+          _mico_zellij_tab_name() {
+            local root name
+            root="$(git rev-parse --show-toplevel 2>/dev/null)" || root="$PWD"
+            name="''${root:t}"
+            [[ "$PWD" == "$HOME" ]] && name="~"
+            # This runs on every cd, so skip the subprocess when nothing changed.
+            [[ "$name" == "$_MICO_ZELLIJ_TAB" ]] && return 0
+            _MICO_ZELLIJ_TAB="$name"
+            zellij action rename-tab "$name" 2>/dev/null
+          }
+
+          add-zsh-hook chpwd _mico_zellij_tab_name
+          _mico_zellij_tab_name
+        fi
 
         zstyle ':completion:*' menu no
         zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'

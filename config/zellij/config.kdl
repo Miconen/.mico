@@ -111,51 +111,6 @@ keybinds clear-defaults=true {
         bind "Esc" { UndoRenamePane; SwitchToMode "Pane"; }
     }
 
-    // Session mode. This whole block was missing: `clear-defaults=true` drops
-    // zellij's built-in `session` mode, and with it Detach and every plugin
-    // launcher. The only way out of a session was Ctrl-q, which QUITS and
-    // destroys it - so session_serialization had nothing to resurrect.
-    session {
-        bind "Ctrl o" { SwitchToMode "Normal"; }
-        bind "d" { Detach; }
-        // Session switcher/creator/renamer. The single most useful plugin.
-        bind "w" {
-            LaunchOrFocusPlugin "session-manager" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "Normal"
-        }
-        bind "l" {
-            LaunchOrFocusPlugin "zellij:layout-manager" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "Normal"
-        }
-        bind "c" {
-            LaunchOrFocusPlugin "configuration" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "Normal"
-        }
-        bind "p" {
-            LaunchOrFocusPlugin "plugin-manager" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "Normal"
-        }
-        bind "a" {
-            LaunchOrFocusPlugin "zellij:about" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "Normal"
-        }
-    }
-
     // All modes but locked
     shared_except "locked" {
         bind "Ctrl g" { SwitchToMode "Locked"; }
@@ -193,9 +148,6 @@ keybinds clear-defaults=true {
     }
     shared_except "move" "locked" {
         bind "Ctrl m" { SwitchToMode "Move"; }
-    }
-    shared_except "session" "locked" {
-        bind "Ctrl o" { SwitchToMode "Session"; }
     }
 }
 
@@ -245,5 +197,9 @@ serialize_pane_viewport true
 // Stop the release-notes popup on every zellij upgrade.
 show_release_notes false
 
-on_force_close "quit"
+// detach, not quit. This fires when the terminal window holding the session is
+// closed (SIGHUP/SIGTERM/SIGINT/SIGQUIT). With "quit" - which this config used to
+// set - closing kitty DESTROYED the session, so session_serialization had nothing
+// to resurrect. "detach" is also zellij's default.
+on_force_close "detach"
 pane_frames false

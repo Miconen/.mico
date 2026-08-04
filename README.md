@@ -149,24 +149,34 @@ Want: nix paths first, `history completion`, `history-substring-search-up`,
 ## zellij
 
 ```
-Ctrl-g   lock / unlock (pass keys through to the terminal)
+Ctrl-g   lock / unlock (pass keys straight through to the terminal)
 Ctrl-p   pane      Ctrl-t   tab       Ctrl-n   resize
-Ctrl-s   scroll    Ctrl-m   move      Ctrl-o   session
+Ctrl-s   scroll    Ctrl-m   move
 Alt-d    detach            Ctrl-q   quit (DESTROYS the session)
 Alt-[ / Alt-]     cycle swap layouts
 Alt-h/j/k/l       move focus        Alt-n   new pane
-zt                jump to / create a tab named after the current project
 ```
 
-Session mode (`Ctrl-o`): `d` detach, `w` session manager, `l` layout manager,
-`c` configuration, `p` plugin manager, `a` about.
+**Tab names follow the project automatically.** A `chpwd` hook renames the tab to
+the git repo name, or the directory name outside a repo, or `~` at home. No
+keybind and nothing to run. It skips the subprocess when the name has not changed.
 
-**Detach, do not quit.** `Alt-d` leaves the session running so
-`session_serialization` can resurrect its panes and cwds; `Ctrl-q` tears it down.
-The config had no detach binding at all until recently, because
-`clear-defaults=true` drops zellij's whole `session` mode along with it.
+**`on_force_close "detach"`.** This fires when the terminal holding the session is
+closed. It used to be `"quit"`, which destroyed the session on every window close
+and made `session_serialization` pointless. With `detach`, closing kitty leaves
+panes and cwds intact for next time. `detach` is also zellij's own default.
 
-`ZELLIJ_SKIP=1` starts a shell without attaching, for when you need a bare shell.
+**There is deliberately no session mode.** Six binds for things you can reach from
+the CLI when you actually need them:
+
+```bash
+zellij action launch-or-focus-plugin zellij:session-manager --floating
+zellij ls                    # list sessions
+zellij kill-session main     # if a session gets wedged
+```
+
+`ZELLIJ_SKIP=1` starts a shell without attaching, for when a multiplexer is in the
+way.
 
 ## Fixes
 
