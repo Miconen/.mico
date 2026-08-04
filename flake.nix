@@ -8,10 +8,23 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Prebuilt nix-index database, so `comma` and `nix-locate` work immediately
+    # instead of after a long local index build. Costs a few hundred MB, refreshed
+    # upstream weekly.
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    { nixpkgs, home-manager, ... }:
+    {
+      nixpkgs,
+      home-manager,
+      nix-index-database,
+      ...
+    }:
     let
       system = "x86_64-linux";
       username = "miso";
@@ -36,6 +49,9 @@
         home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           modules = [
+            # `homeModules`, not `hmModules` - the latter is deprecated upstream
+            # and emits a rename warning.
+            nix-index-database.homeModules.nix-index
             ./home/common.nix
             hostModule
           ];
@@ -56,9 +72,19 @@
 
       devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [
+          # nix
           nixfmt
           statix
           deadnix
+
+          # shell - bootstrap.sh and ci/lint.sh are non-trivial now.
+          # shellcheck-minimal rather than shellcheck: same binary, much smaller
+          # closure, since the full attribute pulls in the wrapper and docs.
+          shellcheck-minimal
+          shfmt
+
+          # CI workflow YAML
+          actionlint
         ];
       };
 

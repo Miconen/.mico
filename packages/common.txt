@@ -35,6 +35,10 @@ nano
 # SSH client and daemon. System integration, and keychain depends on it.
 openssh
 
+# paccache.timer, enabled by bootstrap.sh, prunes /var/cache/pacman. Without it
+# the package cache grows without limit.
+pacman-contrib
+
 # Container runtime. A system service, which nix is poor at outside NixOS.
 # DOCKER_HOST and the docker->podman alias are set in home/common.nix.
 podman

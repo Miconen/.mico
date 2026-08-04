@@ -21,6 +21,11 @@
       options = [ "--preview 'eza --tree --color=always {} | head -200'" ];
     };
 
+    # Hand Ctrl-R to atuin. An empty command is the documented, supported way to
+    # release the binding to a history manager - upstream names Atuin explicitly.
+    # Setting a non-empty custom command instead would print a startup warning.
+    historyWidget.command = "";
+
     # Catppuccin Mocha, replacing the hand-rolled blue palette in the old
     # .config/zsh/fzf.sh.
     colors = {

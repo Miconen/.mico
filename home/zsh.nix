@@ -79,6 +79,9 @@
       nixconf = "nvim ${repoPath}/flake.nix";
       ".vimrc" = "nvim ~/.config/nvim";
       nvimdiff = "nvim -d";
+      # Structural diff. delta stays the git pager; this is for "what actually
+      # changed", ignoring reformatting.
+      dft = "difft";
       todo = "nvim ~/.todo.md";
 
       # Directories
@@ -139,6 +142,16 @@
         fi
       '')
 
+      # ---- order 600: fzf-tab ------------------------------------------------
+      # Order is load-bearing and narrow. fzf-tab must come after compinit
+      # (home-manager runs that at 570) but BEFORE anything that wraps
+      # completion widgets. home-manager sources zsh-autosuggestions at 700, and
+      # `programs.zsh.plugins` entries at 900 - so declaring fzf-tab as a plugin
+      # would load it too late and it would silently do nothing.
+      (lib.mkOrder 600 ''
+        source ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
+      '')
+
       # ---- order 1000: general config ---------------------------------------
       (lib.mkOrder 1000 ''
         # Options not covered by programs.zsh.history above
@@ -156,8 +169,18 @@
         # or a glob error. On for sanity when copy-pasting.
         setopt interactive_comments
 
-        zstyle ':completion:*' menu select
+        # fzf-tab requires the native menu to be OFF; `menu select` fights it and
+        # the two together break completion entirely.
+        zstyle ':completion:*' menu no
         zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+
+        # fzf-tab previews
+        zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+        zstyle ':fzf-tab:complete:z:*' fzf-preview 'eza -1 --color=always $realpath'
+        zstyle ':fzf-tab:complete:*:*' fzf-preview \
+          '[[ -d $realpath ]] && eza -1 --color=always $realpath || bat --color=always --style=plain $realpath 2>/dev/null'
+        zstyle ':fzf-tab:*' use-fzf-default-opts yes
+        zstyle ':fzf-tab:*' switch-group '<' '>'
       '')
 
       # ---- last: keybindings ------------------------------------------------

@@ -15,7 +15,6 @@
     ./fzf.nix
     ./mise.nix
     ./tools.nix
-    ./nix-gc.nix
   ];
 
   home = {
@@ -55,10 +54,16 @@
       gh
       lazygit
       lazydocker
+      # Routes staged changes into the right commit of a stack automatically.
+      git-absorb
+      # Structural (syntax-aware) diffs. Exposed as the `dft` alias rather than
+      # replacing delta, which stays the pager for review.
+      difftastic
+      # jq covers JSON; this is the YAML/TOML equivalent. Provides `yq`.
+      yq-go
 
-      # terminal multiplexers (configs are managed verbatim, see tools.nix)
+      # terminal multiplexer (config is managed verbatim, see tools.nix)
       zellij
-      tmux
 
       # editor (config stays in the nvim submodule, see below)
       neovim
@@ -100,8 +105,38 @@
   # Self-hosting: guarantees the `home-manager` CLI matches this flake.
   programs.home-manager.enable = true;
 
-  # Defined once from hostName rather than duplicated in each hosts/*.nix.
-  programs.zsh.shellAliases.hms = "home-manager switch --flake ${repoPath}#${hostName}";
+  # nh wraps home-manager and prints a package diff of what an activation
+  # actually changed. NH_HOME_FLAKE means `nh home switch` needs no path.
+  programs.nh = {
+    enable = true;
+    homeFlake = repoPath;
+  };
+
+  # Weekly garbage collection of THIS user's profile.
+  #
+  # This replaces a hand-written systemd.user timer that used to live in
+  # home/nix-gc.nix. The options are `nix.gc.*` but they are declared in
+  # modules/services/nix-gc.nix upstream, which is why searching for a
+  # modules/misc/nix.nix earlier turned up nothing and led to the wrong
+  # conclusion that no such option existed.
+  #
+  # Upstream is explicit that this only covers the current user's profiles, so
+  # the root/system profile timer installed by bootstrap.sh is still required.
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    persistent = true;
+    options = "--delete-older-than 30d";
+  };
+
+  # Built from hostName rather than duplicated in each hosts/*.nix.
+  #
+  # `zsh -n` is a parse-only syntax check. A successful activation does NOT imply
+  # a valid .zshrc - home-manager never parses the zsh it writes - so without
+  # this guard a typo in zsh.nix would exec you straight into a broken shell and
+  # take away the shell you needed to fix it.
+  programs.zsh.shellAliases.hms =
+    "nh home switch ${repoPath} -c ${hostName} -b backup && zsh -n ~/.zshrc && exec zsh";
 
   xdg.enable = true;
 

@@ -28,9 +28,14 @@ machine you care about.
 ```
 
 It does: btrfs subvolume for `/nix` → install nix → `auto-optimise-store` →
-pacman sync → build paru → AUR sync → submodules → `~/.gitconfig.local` →
-`home-manager switch` → remove pacman packages nix replaced → enable
-`podman.socket` → install the root-level GC timer.
+pacman sync → pacman.conf → build paru → AUR sync → submodules →
+`~/.gitconfig.local` → `home-manager switch` → remove pacman packages nix
+replaced → `podman.socket` → system maintenance timers → root-level GC timer.
+
+The maintenance timers are all off by default on Arch: `fstrim.timer` (SSD TRIM),
+`btrfs-scrub@-.timer` (monthly checksum scrub of `/` — btrfs stores checksums but
+never verifies them unless scrubbed), `smartd`, `paccache.timer`, and
+`reflector.timer`.
 
 AUR packages are separate because `pacman -S` cannot install them. paru itself is
 AUR-only, so it is not installable by an AUR helper or by pacman — bootstrap
@@ -68,12 +73,19 @@ stops Windows PATH shadowing nix binaries, but costs you `code` and
 ## Daily
 
 ```bash
-hms                              # switch (alias, host-correct)
+hms                              # nh home switch + syntax check + exec zsh
 nix flake update                 # bump nixpkgs + home-manager, then hms
 git submodule update --remote    # bump nvim, then hms
 home-manager generations         # list rollback targets
-nix shell nixpkgs#foo            # one-off, not persisted
+, cowsay hi                      # run a package without installing it
+nix-locate bin/ffmpeg            # which package provides this file
+nix shell nixpkgs#foo            # one-off shell, not persisted
 ```
+
+`hms` runs `nh home switch`, which prints a package diff of what changed, then
+`zsh -n ~/.zshrc` before `exec zsh`. That guard matters: activation can succeed
+while writing a `.zshrc` that does not parse, since home-manager never parses the
+zsh it generates.
 
 Editing:
 
@@ -222,12 +234,25 @@ package (a store login shell can lock you out after GC), or use
 
 - `programs.eza` is not enabled on purpose — its zsh integration defines
   `shellAliases.ls` and collides with ours, which fails evaluation outright.
-- home-manager has no `nix.gc` option, so user GC is a timer in `home/nix-gc.nix`.
-  The root/system profile is a separate `/etc/systemd/system` timer written by
-  `bootstrap.sh`, and it does **not** roll back with a home-manager generation.
+- User GC is `nix.gc.automatic`. The options live under `nix.gc.*` but are
+  declared in `modules/services/nix-gc.nix` upstream, which is easy to miss when
+  searching by file path. Upstream only collects the *current user's* profiles, so
+  the root/system profile has a separate `/etc/systemd/system` timer written by
+  `bootstrap.sh` — and that one does **not** roll back with a generation.
 - `auto-optimise-store` is a daemon setting needing root, so `bootstrap.sh` does it.
 - `mise install` runs on every `hms` as an activation hook. Skip with
   `MICO_SKIP_MISE_INSTALL=1`.
+- **Ctrl-R is atuin**, not fzf. fzf's history widget is deliberately blanked
+  (`historyWidget.command = ""`), which is the documented way to hand Ctrl-R to a
+  history manager. Up/Down stay on zsh-history-substring-search via
+  `--disable-up-arrow`.
+- **Tab completion is fzf-tab.** It is sourced at `initContent` order 600, which
+  is deliberate: after compinit (570) but before home-manager sources
+  zsh-autosuggestions (700). Declaring it under `programs.zsh.plugins` would put
+  it at 900 and it would silently do nothing.
+- Atuin history is local-only. Do **not** sync `~/.local/share/atuin` with
+  Syncthing or similar — it is a live SQLite database and file-syncing corrupts
+  it. Use atuin's own encrypted sync if you want cross-machine history.
 - `~/.zshrc` is a read-only store symlink. Editing it does nothing.
 - `dotDir` is pinned to `$HOME`; the default moves to `$XDG_CONFIG_HOME/zsh` at
   stateVersion 26.05.
@@ -246,9 +271,9 @@ ci/lint.sh           lint runner, works locally too
 statix.toml          lint exclusions that clash with module conventions
 bootstrap.sh         machine setup, --check audits pacman drift
 flake.nix            nixpkgs unstable + home-manager master, devShell, checks
-home/                zsh, starship, git, fzf, mise, tools, nix-gc
+home/                zsh, starship, git, fzf, mise, tools
 hosts/               arch.nix, wsl.nix
-config/              verbatim: zellij, tmux, kitty, bat theme
+config/              verbatim: zellij, kitty, bat theme
 packages/            repo lists: common, arch, wsl, migrated
                      AUR lists: aur-common, aur-arch, aur-wsl
 .config/nvim         submodule → Miconen/nvim

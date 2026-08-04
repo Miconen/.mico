@@ -77,9 +77,8 @@ smartmontools
 zram-generator
 fuse2
 
+# Ranks pacman mirrors by speed; reflector.timer is enabled by bootstrap.sh.
+reflector
+
 # Browser
 firefox
-
-# Still used to manage nothing in particular now that dotfiles moved to nix,
-# but harmless to keep around while the migration settles.
-stow

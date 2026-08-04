@@ -380,6 +380,38 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 4d. pacman.conf niceties
+#     Two lines only, both idempotent. Already set on the current laptop, so this
+#     is really for a fresh machine.
+# ---------------------------------------------------------------------------
+step "pacman.conf"
+
+if (( ! DO_PACMAN )); then
+  skip "--no-pacman given"
+elif [[ ! -f /etc/pacman.conf ]]; then
+  skip "no /etc/pacman.conf"
+else
+  # `^Color` and `^ParallelDownloads` - the shipped file has both commented out.
+  if grep -qE '^Color' /etc/pacman.conf; then
+    skip "Color already enabled"
+  elif (( DRY )); then
+    warn "would uncomment Color in /etc/pacman.conf"
+  else
+    ok "enabling Color"
+    sudo sed -i 's/^#Color$/Color/' /etc/pacman.conf
+  fi
+
+  if grep -qE '^ParallelDownloads' /etc/pacman.conf; then
+    skip "ParallelDownloads already set"
+  elif (( DRY )); then
+    warn "would set ParallelDownloads = 5 in /etc/pacman.conf"
+  else
+    ok "enabling ParallelDownloads = 5"
+    sudo sed -i 's/^#ParallelDownloads.*$/ParallelDownloads = 5/' /etc/pacman.conf
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 4b. AUR helper
 #     paru is an AUR package, so no AUR helper can install it - `pacman -S paru`
 #     does not work either, it is not in the official repos. It has to be built
@@ -598,6 +630,66 @@ else
     warn "nix-gc.timer not active - it is created by home-manager, so"
     warn "run 'systemctl --user daemon-reload' and re-check"
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# 9b. system maintenance timers
+#     All root-level, all shipped by packages we already declare, all off by
+#     default on Arch. Each was verified disabled on the laptop.
+# ---------------------------------------------------------------------------
+step "System maintenance timers"
+
+# unit -> what it does, and why it is not optional
+enable_system_unit() {
+  local unit="$1" why="$2"
+
+  if ! systemctl list-unit-files "$unit" &>/dev/null \
+    || [[ -z "$(systemctl list-unit-files --no-legend "$unit" 2>/dev/null)" ]]; then
+    skip "$unit not available (package missing?)"
+    return 0
+  fi
+
+  if systemctl is-enabled "$unit" &>/dev/null; then
+    skip "$unit already enabled"
+    return 0
+  fi
+
+  if (( DRY )); then
+    warn "would enable $unit ($why)"
+    return 0
+  fi
+
+  ok "enabling $unit ($why)"
+  sudo systemctl enable --now "$unit" || warn "could not enable $unit"
+  return 0
+}
+
+if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
+  skip "systemd not running"
+elif [[ "$HOST" == "wsl" ]]; then
+  # No physical disk to trim or scrub, and WSL manages its own storage.
+  skip "not applicable inside WSL"
+else
+  # Discard unused SSD blocks. Without this, sustained write performance on NVMe
+  # degrades over time.
+  enable_system_unit fstrim.timer "weekly SSD TRIM"
+
+  # Monthly checksum verification of /. btrfs stores checksums but never checks
+  # them unless scrubbed, so silent corruption otherwise goes unnoticed until a
+  # read fails. The unit name escapes the mountpoint: "-" means "/".
+  enable_system_unit "btrfs-scrub@-.timer" "monthly btrfs scrub of /"
+
+  # SMART monitoring. smartmontools was installed but the daemon was off, so it
+  # was collecting nothing.
+  enable_system_unit smartd.service "SMART disk health monitoring"
+
+  # Prune /var/cache/pacman, which otherwise grows without limit. Complements the
+  # nix GC timers rather than duplicating them - different store entirely.
+  enable_system_unit paccache.timer "weekly pacman cache pruning"
+
+  # Rank mirrors by speed. Optional in the sense that a slow mirror only costs
+  # time, but it costs it on every single install.
+  enable_system_unit reflector.timer "mirror ranking"
 fi
 
 # ---------------------------------------------------------------------------

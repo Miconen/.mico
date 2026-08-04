@@ -24,6 +24,43 @@
     };
   };
 
+  # Shell history: better search, stats, and dedup than raw zsh history.
+  #
+  # Local-only for now. Cross-machine sync is atuin's own encrypted protocol -
+  # do NOT try to sync ~/.local/share/atuin with Syncthing or similar, it is a
+  # live SQLite database and file-syncing it corrupts it.
+  #
+  # Key bindings are split deliberately:
+  #   Ctrl-R      atuin  (home/fzf.nix yields it by blanking fzf's historyWidget)
+  #   Up / Down   zsh-history-substring-search, via --disable-up-arrow
+  programs.atuin = {
+    enable = true;
+    enableZshIntegration = true;
+    flags = [ "--disable-up-arrow" ];
+    settings = {
+      # Search the shell history of this machine only, newest first.
+      filter_mode = "global";
+      style = "compact";
+      inline_height = 15;
+      show_preview = true;
+      # Skip commands that are noise in history search.
+      history_filter = [
+        "^ "
+        "^clear$"
+        "^c$"
+        "^exit$"
+        "^:q$"
+      ];
+    };
+  };
+
+  # nix-index gives `nix-locate bin/foo` (which package provides this file), and
+  # the database flake input makes `,` (comma) work: `, cowsay hi` runs a package
+  # without installing it. Both exist so that "never install imperatively" stays
+  # convenient rather than annoying.
+  programs.nix-index.enable = true;
+  programs.nix-index-database.comma.enable = true;
+
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
@@ -50,15 +87,14 @@
   # ---------------------------------------------------------------------------
   # Verbatim configs.
   #
-  # zellij's config is ~150 lines of nested KDL keybindings and tmux.conf is
-  # terse imperative directives. Translating either into Nix attribute sets
-  # would be unreadable and risk silent breakage for zero functional gain, so
-  # they are managed as files. They are still fully version-controlled and
-  # still reproduce identically on every machine.
+  # zellij's config is ~170 lines of nested KDL keybindings, and kitty.conf is
+  # plain key/value. Translating either into Nix attribute sets would be
+  # unreadable and risk silent breakage for zero functional gain, so they are
+  # managed as files. They are still fully version-controlled and still
+  # reproduce identically on every machine.
   # ---------------------------------------------------------------------------
   xdg.configFile = {
     "zellij/config.kdl".source = ../config/zellij/config.kdl;
     "zellij/layouts/default.kdl".source = ../config/zellij/layouts/default.kdl;
-    "tmux/tmux.conf".source = ../config/tmux/tmux.conf;
   };
 }
