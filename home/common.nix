@@ -135,8 +135,7 @@
   # a valid .zshrc - home-manager never parses the zsh it writes - so without
   # this guard a typo in zsh.nix would exec you straight into a broken shell and
   # take away the shell you needed to fix it.
-  programs.zsh.shellAliases.hms =
-    "nh home switch ${repoPath} -c ${hostName} -b backup && zsh -n ~/.zshrc && exec zsh";
+  programs.zsh.shellAliases.hms = "nh home switch ${repoPath} -c ${hostName} -b backup && zsh -n ~/.zshrc && exec zsh";
 
   xdg.enable = true;
 

@@ -8,7 +8,7 @@
 #
 set -uo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 
 # Use the devShell's tools if they are already on PATH (inside `nix develop`, or
 # with direnv active in this repo), otherwise enter the shell per invocation.

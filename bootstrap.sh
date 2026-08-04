@@ -31,20 +31,32 @@ CHECK_ONLY=0
 # output helpers
 # ---------------------------------------------------------------------------
 if [[ -t 1 ]]; then
-  C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_RED=$'\033[31m'
-  C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_BLUE=$'\033[34m'
+  C_RESET=$'\033[0m'
+  C_BOLD=$'\033[1m'
+  C_RED=$'\033[31m'
+  C_GREEN=$'\033[32m'
+  C_YELLOW=$'\033[33m'
+  C_BLUE=$'\033[34m'
 else
-  C_RESET=""; C_BOLD=""; C_RED=""; C_GREEN=""; C_YELLOW=""; C_BLUE=""
+  C_RESET=""
+  C_BOLD=""
+  C_RED=""
+  C_GREEN=""
+  C_YELLOW=""
+  C_BLUE=""
 fi
 
-step()  { printf '\n%s==>%s %s%s%s\n' "$C_BLUE" "$C_RESET" "$C_BOLD" "$*" "$C_RESET"; }
-ok()    { printf '  %s+%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
-skip()  { printf '  %s-%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
-warn()  { printf '  %s!%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
-die()   { printf '\n%serror:%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
+step() { printf '\n%s==>%s %s%s%s\n' "$C_BLUE" "$C_RESET" "$C_BOLD" "$*" "$C_RESET"; }
+ok() { printf '  %s+%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+skip() { printf '  %s-%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
+warn() { printf '  %s!%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+die() {
+  printf '\n%serror:%s %s\n' "$C_RED" "$C_RESET" "$*" >&2
+  exit 1
+}
 
 run() {
-  if (( DRY )); then
+  if ((DRY)); then
     printf '  %s?%s would run: %s\n' "$C_YELLOW" "$C_RESET" "$*"
   else
     "$@"
@@ -52,16 +64,16 @@ run() {
 }
 
 confirm() {
-  (( ASSUME_YES )) && return 0
-  (( DRY )) && return 1
+  ((ASSUME_YES)) && return 0
+  ((DRY)) && return 1
   local reply
   read -r -p "  ? $1 [y/N] " reply
-  [[ "$reply" == [yY]* ]]
+  [[ $reply == [yY]* ]]
 }
 
 read_list() {
   # strips comments and blank lines
-  [[ -f "$1" ]] || return 0
+  [[ -f $1 ]] || return 0
   sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$1"
 }
 
@@ -70,15 +82,39 @@ read_list() {
 # ---------------------------------------------------------------------------
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --host)      HOST="${2:-}"; shift 2 ;;
-    --host=*)    HOST="${1#*=}"; shift ;;
-    --yes|-y)    ASSUME_YES=1; shift ;;
-    --no-pacman) DO_PACMAN=0; shift ;;
-    --no-remove) DO_REMOVE=0; shift ;;
-    --dry-run|-n) DRY=1; shift ;;
-    --check)     CHECK_ONLY=1; shift ;;
-    -h|--help)   sed -n '3,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *)           die "unknown argument: $1" ;;
+  --host)
+    HOST="${2:-}"
+    shift 2
+    ;;
+  --host=*)
+    HOST="${1#*=}"
+    shift
+    ;;
+  --yes | -y)
+    ASSUME_YES=1
+    shift
+    ;;
+  --no-pacman)
+    DO_PACMAN=0
+    shift
+    ;;
+  --no-remove)
+    DO_REMOVE=0
+    shift
+    ;;
+  --dry-run | -n)
+    DRY=1
+    shift
+    ;;
+  --check)
+    CHECK_ONLY=1
+    shift
+    ;;
+  -h | --help)
+    sed -n '3,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+  *) die "unknown argument: $1" ;;
   esac
 done
 
@@ -86,7 +122,7 @@ done
 # host detection
 # ---------------------------------------------------------------------------
 detect_host() {
-  if [[ -n "${WSL_DISTRO_NAME:-}" ]] \
+  if [[ -n ${WSL_DISTRO_NAME:-} ]] \
     || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
     echo wsl
   else
@@ -94,8 +130,8 @@ detect_host() {
   fi
 }
 
-[[ -n "$HOST" ]] || HOST="$(detect_host)"
-[[ "$HOST" == "arch" || "$HOST" == "wsl" ]] \
+[[ -n $HOST ]] || HOST="$(detect_host)"
+[[ $HOST == "arch" || $HOST == "wsl" ]] \
   || die "host must be 'arch' or 'wsl', got '$HOST'"
 
 # ---------------------------------------------------------------------------
@@ -103,7 +139,7 @@ detect_host() {
 # Read-only, needs no sudo, exits 1 if anything is out of sync. This is the
 # useful half of the old backup-package-list timer, without the dump.
 # ---------------------------------------------------------------------------
-if (( CHECK_ONLY )); then
+if ((CHECK_ONLY)); then
   step "Pacman drift for host '$HOST'"
 
   command -v pacman >/dev/null || die "pacman not found, nothing to check"
@@ -123,9 +159,10 @@ if (( CHECK_ONLY )); then
   mapfile -t explicit < <(pacman -Qqe | sort -u)
 
   in_list() {
-    local needle="$1"; shift
+    local needle="$1"
+    shift
     local x
-    for x in "$@"; do [[ "$x" == "$needle" ]] && return 0; done
+    for x in "$@"; do [[ $x == "$needle" ]] && return 0; done
     return 1
   }
 
@@ -145,7 +182,7 @@ if (( CHECK_ONLY )); then
     fi
   done
 
-  if (( ${#missing[@]} )); then
+  if ((${#missing[@]})); then
     drift=1
     warn "declared but NOT installed (${#missing[@]}):"
     printf '      %s\n' "${missing[@]}"
@@ -154,7 +191,7 @@ if (( CHECK_ONLY )); then
     ok "all ${#declared[@]} declared packages are installed"
   fi
 
-  if (( ${#dep_only[@]} )); then
+  if ((${#dep_only[@]})); then
     drift=1
     warn "declared but installed only as a dependency (${#dep_only[@]}):"
     printf '      %s\n' "${dep_only[@]}"
@@ -168,7 +205,7 @@ if (( CHECK_ONLY )); then
     in_list "$p" "${migrated[@]}" && continue
     undeclared+=("$p")
   done
-  if (( ${#undeclared[@]} )); then
+  if ((${#undeclared[@]})); then
     drift=1
     warn "installed explicitly but NOT declared (${#undeclared[@]}):"
     printf '      %s\n' "${undeclared[@]}"
@@ -184,7 +221,7 @@ if (( CHECK_ONLY )); then
   for p in "${migrated[@]}"; do
     in_list "$p" "${explicit[@]}" && stale+=("$p")
   done
-  if (( ${#stale[@]} )); then
+  if ((${#stale[@]})); then
     drift=1
     warn "moved to nix but still installed via pacman (${#stale[@]}):"
     printf '      %s\n' "${stale[@]}"
@@ -193,7 +230,7 @@ if (( CHECK_ONLY )); then
     ok "no migrated packages left on pacman"
   fi
 
-  if (( drift )); then
+  if ((drift)); then
     printf '\n%sdrift detected%s\n' "$C_YELLOW" "$C_RESET"
     exit 1
   fi
@@ -202,7 +239,7 @@ if (( CHECK_ONLY )); then
 fi
 
 step "Bootstrapping host '$HOST' from $REPO"
-(( DRY )) && warn "dry run - nothing will be changed"
+((DRY)) && warn "dry run - nothing will be changed"
 
 # ---------------------------------------------------------------------------
 # 0. preflight
@@ -211,7 +248,7 @@ step "Preflight"
 
 [[ -f "$REPO/flake.nix" ]] || die "no flake.nix in $REPO - is this the right directory?"
 
-if [[ "$REPO" != "$HOME/.mico" ]]; then
+if [[ $REPO != "$HOME/.mico" ]]; then
   warn "repo is at $REPO but the flake expects ~/.mico"
   warn "the nvim symlink and the hms alias hardcode ~/.mico, so move it or"
   warn "update home/common.nix and hosts/*.nix"
@@ -227,7 +264,7 @@ if ! command -v sudo >/dev/null; then
 fi
 
 # Warm the sudo timestamp once, so later phases do not each stop for a password.
-(( DRY )) || sudo -v
+((DRY)) || sudo -v
 
 ok "running as $(whoami), home $HOME"
 
@@ -241,13 +278,13 @@ ok "running as $(whoami), home $HOME"
 # bash for this repo, so this should normally stay quiet.
 bash_path="$(command -v bash || true)"
 bash_real=""
-[[ -n "$bash_path" ]] && bash_real="$(readlink -f "$bash_path" 2>/dev/null || echo "$bash_path")"
+[[ -n $bash_path ]] && bash_real="$(readlink -f "$bash_path" 2>/dev/null || echo "$bash_path")"
 # Resolve symlinks: .envrc deliberately shadows bash with .direnv/bin/bash, which
 # points AT /usr/bin/bash, and /bin is a symlink to /usr/bin on Arch. Comparing
 # the unresolved path would warn about the very fix that is working.
-if [[ -n "$bash_real" && "$bash_real" != /usr/bin/bash ]]; then
+if [[ -n $bash_real && $bash_real != /usr/bin/bash ]]; then
   warn "bash on PATH resolves to $bash_real, not /usr/bin/bash"
-  if [[ -n "${IN_NIX_SHELL:-}" ]]; then
+  if [[ -n ${IN_NIX_SHELL:-} ]]; then
     warn "cause: you are inside a nix shell (IN_NIX_SHELL=${IN_NIX_SHELL})"
   fi
   warn "that bash has no compgen, so manual makepkg/paru runs will fail"
@@ -281,7 +318,7 @@ nix_env() {
   # Must not be a trailing `[[ ... ]] && .` - that returns 1 when the profile is
   # absent, and under `set -e` a bare call to this function would kill the
   # script. Explicit `return 0`.
-  if [[ -e "$profile" ]]; then
+  if [[ -e $profile ]]; then
     # shellcheck source=/dev/null
     . "$profile"
   fi
@@ -292,7 +329,7 @@ if command -v nix >/dev/null || [[ -e /nix/var/nix/profiles/default/bin/nix ]]; 
   nix_env
   skip "nix already installed ($(nix --version 2>/dev/null || echo 'version unknown'))"
 else
-  if [[ "$HOST" == "wsl" ]] && ! [[ -d /run/systemd/system ]]; then
+  if [[ $HOST == "wsl" ]] && ! [[ -d /run/systemd/system ]]; then
     die "systemd is not running. WSL needs the following in /etc/wsl.conf:
 
            [boot]
@@ -301,8 +338,13 @@ else
          then 'wsl --shutdown' from Windows, and re-run this script."
   fi
 
-  ok "installing nix (multi-user, upstream - not the Determinate fork)"
-  if (( DRY )); then
+  # NOTE: this endpoint installs *Determinate Nix* (their distribution, with
+  # determinate-nixd), not upstream Nix - verified by installing it and getting
+  # "nix (Determinate Nix 3.21.9) 2.34.8". The --determinate flag toggles their
+  # enterprise features, it is NOT what selects the distribution. For strictly
+  # upstream Nix, use the official installer from nixos.org instead.
+  ok "installing nix, multi-user (Determinate Nix distribution)"
+  if ((DRY)); then
     warn "would run the Determinate nix-installer"
   else
     curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
@@ -311,7 +353,7 @@ else
   nix_env
 fi
 
-if ! (( DRY )) && ! command -v nix >/dev/null; then
+if ! ((DRY)) && ! command -v nix >/dev/null; then
   die "nix is installed but not on PATH. Open a new shell and re-run this script."
 fi
 
@@ -326,7 +368,7 @@ else
   # Store deduplication is a daemon setting requiring root, so home-manager
   # cannot express it. Garbage collection itself is a user timer (home/nix-gc.nix).
   ok "enabling auto-optimise-store"
-  if (( DRY )); then
+  if ((DRY)); then
     warn "would append auto-optimise-store to /etc/nix/nix.conf"
   else
     echo 'auto-optimise-store = true' | sudo tee -a /etc/nix/nix.conf >/dev/null
@@ -339,13 +381,16 @@ fi
 # ---------------------------------------------------------------------------
 step "System packages (pacman)"
 
-if (( ! DO_PACMAN )); then
+if ((!DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found, not an Arch-based system"
 else
   mapfile -t wanted < <(
-    { read_list "$REPO/packages/common.txt"; read_list "$REPO/packages/$HOST.txt"; } | sort -u
+    {
+      read_list "$REPO/packages/common.txt"
+      read_list "$REPO/packages/$HOST.txt"
+    } | sort -u
   )
 
   missing=()
@@ -358,7 +403,7 @@ else
     fi
   done
 
-  if (( ${#missing[@]} == 0 )); then
+  if ((${#missing[@]} == 0)); then
     ok "all ${#wanted[@]} declared system packages already installed"
   else
     ok "installing ${#missing[@]} missing: ${missing[*]}"
@@ -372,7 +417,7 @@ else
   # removed when that parent goes. `pacman -S --needed` will NOT fix this: it
   # skips already-installed packages without touching the install reason, so the
   # reason has to be set separately.
-  if (( ${#dep_only[@]} )); then
+  if ((${#dep_only[@]})); then
     ok "marking ${#dep_only[@]} dependency-only as explicit: ${dep_only[*]}"
     run sudo pacman -D --asexplicit -- "${dep_only[@]}" \
       || warn "could not update install reasons"
@@ -386,7 +431,7 @@ fi
 # ---------------------------------------------------------------------------
 step "pacman.conf"
 
-if (( ! DO_PACMAN )); then
+if ((!DO_PACMAN)); then
   skip "--no-pacman given"
 elif [[ ! -f /etc/pacman.conf ]]; then
   skip "no /etc/pacman.conf"
@@ -394,7 +439,7 @@ else
   # `^Color` and `^ParallelDownloads` - the shipped file has both commented out.
   if grep -qE '^Color' /etc/pacman.conf; then
     skip "Color already enabled"
-  elif (( DRY )); then
+  elif ((DRY)); then
     warn "would uncomment Color in /etc/pacman.conf"
   else
     ok "enabling Color"
@@ -403,7 +448,7 @@ else
 
   if grep -qE '^ParallelDownloads' /etc/pacman.conf; then
     skip "ParallelDownloads already set"
-  elif (( DRY )); then
+  elif ((DRY)); then
     warn "would set ParallelDownloads = 5 in /etc/pacman.conf"
   else
     ok "enabling ParallelDownloads = 5"
@@ -424,13 +469,13 @@ step "AUR helper"
 
 AUR_HELPER_PKG=paru-bin
 
-if (( ! DO_PACMAN )); then
+if ((!DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found"
 elif command -v paru >/dev/null; then
   skip "paru already installed ($(paru --version 2>/dev/null | head -1))"
-elif (( DRY )); then
+elif ((DRY)); then
   warn "would build and install $AUR_HELPER_PKG from the AUR with makepkg"
 else
   # makepkg refuses to run as root, which is one reason this script does too.
@@ -452,8 +497,8 @@ else
     # Prepending rather than replacing, so anything else makepkg needs is still
     # reachable further down PATH.
     if git clone --depth 1 "https://aur.archlinux.org/${AUR_HELPER_PKG}.git" "$aur_tmp/$AUR_HELPER_PKG" \
-      && ( cd "$aur_tmp/$AUR_HELPER_PKG" \
-           && PATH="/usr/bin:/usr/local/bin:$PATH" makepkg -si --noconfirm ); then
+      && (cd "$aur_tmp/$AUR_HELPER_PKG" \
+        && PATH="/usr/bin:/usr/local/bin:$PATH" makepkg -si --noconfirm); then
       ok "paru installed"
     else
       warn "could not build $AUR_HELPER_PKG - AUR packages will be skipped"
@@ -467,13 +512,16 @@ fi
 # ---------------------------------------------------------------------------
 step "AUR packages"
 
-if (( ! DO_PACMAN )); then
+if ((!DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found"
 else
   mapfile -t aur_wanted < <(
-    { read_list "$REPO/packages/aur-common.txt"; read_list "$REPO/packages/aur-$HOST.txt"; } | sort -u
+    {
+      read_list "$REPO/packages/aur-common.txt"
+      read_list "$REPO/packages/aur-$HOST.txt"
+    } | sort -u
   )
 
   aur_missing=()
@@ -483,9 +531,9 @@ else
     fi
   done
 
-  if (( ${#aur_wanted[@]} == 0 )); then
+  if ((${#aur_wanted[@]} == 0)); then
     skip "no AUR packages declared"
-  elif (( ${#aur_missing[@]} == 0 )); then
+  elif ((${#aur_missing[@]} == 0)); then
     ok "all ${#aur_wanted[@]} declared AUR packages already installed"
   elif ! command -v paru >/dev/null; then
     warn "paru unavailable, skipping: ${aur_missing[*]}"
@@ -518,7 +566,7 @@ else
   # .gitmodules uses SSH URLs. On a fresh machine there may be no key yet, so
   # rewrite to HTTPS just for this command rather than failing.
   run git -C "$REPO" \
-    -c url."https://github.com/".insteadOf="git@github.com:" \
+    -c 'url.https://github.com/.insteadOf=git@github.com:' \
     submodule update --init --recursive \
     || warn "submodule init failed - run it manually once SSH keys are set up"
 fi
@@ -530,17 +578,17 @@ step "Git identity"
 
 if [[ -f "$HOME/.gitconfig.local" ]] \
   && git config --file "$HOME/.gitconfig.local" --get user.email >/dev/null 2>&1; then
-  skip "~/.gitconfig.local already has an identity"
-elif (( DRY )); then
+  skip "$HOME/.gitconfig.local already has an identity"
+elif ((DRY)); then
   warn "would prompt for git user.name and user.email"
-elif (( ASSUME_YES )); then
+elif ((ASSUME_YES)); then
   warn "no ~/.gitconfig.local and --yes given; set it later or commits will fail:"
   warn "  git config --file ~/.gitconfig.local user.name  '...'"
   warn "  git config --file ~/.gitconfig.local user.email '...'"
 else
   read -r -p "  ? git user.name: " git_name
   read -r -p "  ? git user.email: " git_email
-  if [[ -n "$git_name" && -n "$git_email" ]]; then
+  if [[ -n $git_name && -n $git_email ]]; then
     git config --file "$HOME/.gitconfig.local" user.name "$git_name"
     git config --file "$HOME/.gitconfig.local" user.email "$git_email"
     ok "wrote ~/.gitconfig.local (never committed - this repo is public)"
@@ -571,7 +619,7 @@ fi
 # ---------------------------------------------------------------------------
 step "Reconciling pacman against nix"
 
-if (( ! DO_REMOVE )); then
+if ((!DO_REMOVE)); then
   skip "--no-remove given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found"
@@ -591,7 +639,7 @@ else
     fi
   done
 
-  if (( ${#present[@]} == 0 )); then
+  if ((${#present[@]} == 0)); then
     ok "no migrated packages left on pacman"
   else
     warn "these are installed via pacman but now come from nix:"
@@ -654,7 +702,7 @@ enable_system_unit() {
     return 0
   fi
 
-  if (( DRY )); then
+  if ((DRY)); then
     warn "would enable $unit ($why)"
     return 0
   fi
@@ -666,7 +714,7 @@ enable_system_unit() {
 
 if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
   skip "systemd not running"
-elif [[ "$HOST" == "wsl" ]]; then
+elif [[ $HOST == "wsl" ]]; then
   # No physical disk to trim or scrub, and WSL manages its own storage.
   skip "not applicable inside WSL"
 else
@@ -709,9 +757,9 @@ GC_TIMER=/etc/systemd/system/nix-gc-system.timer
 
 if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
   skip "systemd not running"
-elif [[ -f "$GC_TIMER" ]] && systemctl is-enabled nix-gc-system.timer &>/dev/null; then
+elif [[ -f $GC_TIMER ]] && systemctl is-enabled nix-gc-system.timer &>/dev/null; then
   skip "nix-gc-system.timer already installed and enabled"
-elif (( DRY )); then
+elif ((DRY)); then
   warn "would install and enable $GC_TIMER"
 else
   ok "installing weekly system-profile GC timer"
@@ -764,7 +812,7 @@ cat <<EOF
 
 EOF
 
-if [[ "$HOST" == "arch" ]]; then
+if [[ $HOST == "arch" ]]; then
   cat <<'EOF'
   kitty's font and theme are managed by this repo, so no manual font step is
   needed. If glyphs still look wrong, restart kitty so fontconfig is re-read.

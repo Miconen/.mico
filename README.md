@@ -199,6 +199,12 @@ vainfo   # expect radeonsi entries; needs libva-utils
 `bootstrap.sh --check` reports these as installed-but-undeclared, but never
 removes undeclared packages automatically.
 
+**Which Nix is this?** `install.determinate.systems` installs *Determinate Nix*,
+not upstream — `nix --version` reports e.g. `nix (Determinate Nix 3.21.9) 2.34.8`.
+The `--determinate` flag toggles enterprise features and does **not** select the
+distribution, so omitting it does not get you upstream. Everything here works
+identically on either; use the nixos.org installer if you want strictly upstream.
+
 **`compgen: command not found` during an AUR build.** nixpkgs’ non-interactive
 `bash` is built with `--disable-readline`, which also disables programmable
 completion — so it has no `compgen`, and makepkg’s `config.sh` dies inside
