@@ -56,9 +56,15 @@
 
     shellAliases = {
       # File system
-      ls = "eza -lh --group-directories-first --icons always";
+      # eza documents `--icons=WHEN`, with an equals sign. Space-separated
+      # (`--icons always`) parses `always` as a positional path argument, so
+      # `ls` tries to list a file called "always" instead.
+      #
+      # `always` also emits icons when piped, e.g. `ls | grep foo`. Use
+      # `--icons=auto` if you'd rather they only appear on a real terminal.
+      ls = "eza -lh --group-directories-first --icons=always";
       lsa = "ls -a";
-      lt = "eza --tree --level=2 --long --icons --git";
+      lt = "eza --tree --level=2 --long --icons=always --git";
       lta = "lt -a";
       # was: batcat (Debian-only binary name, broken on Arch)
       ff = "fzf --preview 'bat --style=numbers --color=always {}'";
