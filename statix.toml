@@ -1,0 +1,13 @@
+# statix lint configuration.
+#
+# repeated_keys wants `programs.a = ...; programs.b = ...;` collapsed into a
+# single nested `programs = { a = ...; b = ...; }`. That is reasonable advice for
+# ordinary Nix, and wrong for module files: flat `programs.foo.bar = ...` lines
+# are the home-manager/NixOS convention, read better, and produce smaller diffs.
+#
+# empty_pattern wants `_:` instead of `{ ... }:`. `{ ... }:` is the conventional
+# module signature and documents that the file IS a module, so keep it.
+disabled = [
+  "repeated_keys",
+  "empty_pattern",
+]

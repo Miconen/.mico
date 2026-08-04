@@ -87,18 +87,19 @@ nix fmt                 # format all .nix
 nix flake check         # builds BOTH hosts
 ```
 
-CI builds both hosts on every push. **The workflow is parked at `ci/build.yml`**
-because a fine-grained PAT cannot write to `.github/workflows/`. Activate it with
-your own SSH push:
+CI builds both hosts on every push. Lint runs via `ci/lint.sh`, which also works
+locally:
 
 ```bash
-mkdir -p .github/workflows
-git mv ci/build.yml .github/workflows/build.yml
-git commit -m "Enable CI" && git push
+./ci/lint.sh      # nixfmt --check, statix, deadnix
 ```
 
-The lint job is advisory until `nix fmt` has been run once and committed — then
-drop `continue-on-error` from the workflow.
+Lint is advisory while `continue-on-error: true` is set on that job in
+`.github/workflows/build.yml`. Remove it to make lint blocking.
+
+`statix.toml` disables `repeated_keys` and `empty_pattern` — both are sensible
+for ordinary Nix but wrong for module files, where flat `programs.foo.bar = ...`
+and a `{ ... }:` signature are the convention.
 
 Preview without switching:
 
@@ -209,7 +210,9 @@ package (a store login shell can lock you out after GC), or use
 ## Layout
 
 ```
-ci/build.yml         CI workflow; git mv into .github/workflows/ to enable
+.github/workflows/   CI: builds both hosts on push
+ci/lint.sh           lint runner, works locally too
+statix.toml          lint exclusions that clash with module conventions
 bootstrap.sh         machine setup, --check audits pacman drift
 flake.nix            nixpkgs unstable + home-manager master, devShell, checks
 home/                zsh, starship, git, fzf, mise, tools, nix-gc
