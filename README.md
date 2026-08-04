@@ -194,12 +194,18 @@ fakeroot. Happens when a nix `bash` wins on PATH, most easily by running things
 from `~/.mico` while direnv has the devShell loaded.
 
 ```bash
-which -a bash          # expect /usr/bin/bash first
-echo $IN_NIX_SHELL     # expect empty
+readlink -f "$(command -v bash)"   # expect /usr/bin/bash
 ```
 
-`bootstrap.sh` prepends `/usr/bin` for makepkg and paru, and warns in preflight.
-For a manual build, do the same:
+Resolve the symlink rather than reading `which -a` directly: `.envrc` shadows
+`bash` with `.direnv/bin/bash`, which points at `/usr/bin/bash`, so the raw path
+looks wrong while being correct. `IN_NIX_SHELL=impure` inside this repo is
+expected and fine.
+
+Three layers guard against it: `.envrc` shadows `bash` with `/usr/bin/bash` via
+`.direnv/bin`, `bootstrap.sh` prepends `/usr/bin` for makepkg and paru, and
+preflight warns if `bash` still resolves elsewhere. For a manual build outside
+all of that:
 
 ```bash
 PATH=/usr/bin:$PATH makepkg -si

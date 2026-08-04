@@ -237,17 +237,20 @@ ok "running as $(whoami), home $HOME"
 # on PATH, AUR builds fail with "compgen: command not found" inside fakeroot.
 #
 # The AUR phases below prepend /usr/bin to work around it, but warn here too,
-# because the same trap catches any manual makepkg or paru run.
-if [[ -n "${IN_NIX_SHELL:-}" ]]; then
-  warn "running inside a nix shell (IN_NIX_SHELL=${IN_NIX_SHELL})."
-  warn "its bash lacks compgen, which breaks makepkg. Prefer running this from a"
-  warn "plain shell, or outside \$HOME/.mico if direnv loads the devShell there."
-fi
-
+# because the same trap catches any manual makepkg or paru run. .envrc shadows
+# bash for this repo, so this should normally stay quiet.
 bash_path="$(command -v bash || true)"
-if [[ -n "$bash_path" && "$bash_path" != /usr/bin/bash && "$bash_path" != /bin/bash ]]; then
-  warn "bash on PATH is $bash_path, not /usr/bin/bash"
-  warn "if it came from nix it has no compgen and manual makepkg/paru will fail"
+bash_real=""
+[[ -n "$bash_path" ]] && bash_real="$(readlink -f "$bash_path" 2>/dev/null || echo "$bash_path")"
+# Resolve symlinks: .envrc deliberately shadows bash with .direnv/bin/bash, which
+# points AT /usr/bin/bash, and /bin is a symlink to /usr/bin on Arch. Comparing
+# the unresolved path would warn about the very fix that is working.
+if [[ -n "$bash_real" && "$bash_real" != /usr/bin/bash ]]; then
+  warn "bash on PATH resolves to $bash_real, not /usr/bin/bash"
+  if [[ -n "${IN_NIX_SHELL:-}" ]]; then
+    warn "cause: you are inside a nix shell (IN_NIX_SHELL=${IN_NIX_SHELL})"
+  fi
+  warn "that bash has no compgen, so manual makepkg/paru runs will fail"
 fi
 
 # ---------------------------------------------------------------------------
