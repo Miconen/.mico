@@ -112,7 +112,8 @@ if (( CHECK_ONLY )); then
     { read_list "$REPO/packages/common.txt"; read_list "$REPO/packages/$HOST.txt"; } | sort -u
   )
   mapfile -t migrated < <(read_list "$REPO/packages/migrated.txt" | sort -u)
-  mapfile -t installed < <(pacman -Qqe | sort -u)
+  mapfile -t installed < <(pacman -Qq | sort -u)
+  mapfile -t explicit < <(pacman -Qqe | sort -u)
 
   in_list() {
     local needle="$1"; shift
@@ -123,23 +124,39 @@ if (( CHECK_ONLY )); then
 
   drift=0
 
-  # declared but absent
+  # Declared packages split three ways: absent, present only as somebody else's
+  # dependency, or properly explicit. The middle case matters - a dependency-only
+  # package can be removed out from under you when its parent goes, so a
+  # declaration is not actually satisfied until the install reason is explicit.
   missing=()
+  dep_only=()
   for p in "${declared[@]}"; do
-    in_list "$p" "${installed[@]}" || missing+=("$p")
+    if ! in_list "$p" "${installed[@]}"; then
+      missing+=("$p")
+    elif ! in_list "$p" "${explicit[@]}"; then
+      dep_only+=("$p")
+    fi
   done
+
   if (( ${#missing[@]} )); then
     drift=1
     warn "declared but NOT installed (${#missing[@]}):"
     printf '      %s\n' "${missing[@]}"
-    printf '      fix: ./bootstrap.sh\n'
+    printf '      fix: ./bootstrap.sh   (AUR entries need paru -S)\n'
   else
-    ok "all ${#declared[@]} declared packages installed"
+    ok "all ${#declared[@]} declared packages are installed"
+  fi
+
+  if (( ${#dep_only[@]} )); then
+    drift=1
+    warn "declared but installed only as a dependency (${#dep_only[@]}):"
+    printf '      %s\n' "${dep_only[@]}"
+    printf '      fix: sudo pacman -D --asexplicit %s\n' "${dep_only[*]}"
   fi
 
   # explicitly installed but undeclared
   undeclared=()
-  for p in "${installed[@]}"; do
+  for p in "${explicit[@]}"; do
     in_list "$p" "${declared[@]}" && continue
     in_list "$p" "${migrated[@]}" && continue
     undeclared+=("$p")
@@ -153,10 +170,12 @@ if (( CHECK_ONLY )); then
     ok "no undeclared explicit packages"
   fi
 
-  # moved to nix but pacman still has it
+  # moved to nix but pacman still has it. Explicit only: a migrated package that
+  # is merely somebody's dependency is not something you chose, and pacman would
+  # refuse to remove it anyway.
   stale=()
   for p in "${migrated[@]}"; do
-    in_list "$p" "${installed[@]}" && stale+=("$p")
+    in_list "$p" "${explicit[@]}" && stale+=("$p")
   done
   if (( ${#stale[@]} )); then
     drift=1
@@ -301,9 +320,12 @@ else
   )
 
   missing=()
+  dep_only=()
   for p in "${wanted[@]}"; do
     if ! pacman -Qq -- "$p" &>/dev/null; then
       missing+=("$p")
+    elif ! pacman -Qqe -- "$p" &>/dev/null; then
+      dep_only+=("$p")
     fi
   done
 
@@ -314,6 +336,16 @@ else
     # --needed makes this safe to repeat; AUR packages will fail here and need paru
     run sudo pacman -S --needed --noconfirm -- "${missing[@]}" \
       || warn "some packages failed - AUR entries (e.g. wsl2-ssh-agent) need: paru -S <pkg>"
+  fi
+
+  # A declared package that is only present as somebody else's dependency can be
+  # removed when that parent goes. `pacman -S --needed` will NOT fix this: it
+  # skips already-installed packages without touching the install reason, so the
+  # reason has to be set separately.
+  if (( ${#dep_only[@]} )); then
+    ok "marking ${#dep_only[@]} dependency-only as explicit: ${dep_only[*]}"
+    run sudo pacman -D --asexplicit -- "${dep_only[@]}" \
+      || warn "could not update install reasons"
   fi
 fi
 
@@ -399,9 +431,13 @@ else
 
   present=()
   for p in "${candidates[@]}"; do
-    # `cmd && arr+=(x)` as a bare statement returns 1 when cmd fails, which
-    # `set -e` treats as fatal. if/then instead.
-    if pacman -Qq -- "$p" &>/dev/null; then
+    # -Qqe not -Qq: only offer to remove packages that were explicitly wanted.
+    # A migrated package present as somebody else's dependency is not something
+    # you chose, and pacman would refuse to remove it anyway.
+    #
+    # Note `cmd && arr+=(x)` as a bare statement returns 1 when cmd fails, which
+    # `set -e` treats as fatal, hence if/then.
+    if pacman -Qqe -- "$p" &>/dev/null; then
       present+=("$p")
     fi
   done

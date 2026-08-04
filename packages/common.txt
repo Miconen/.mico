@@ -15,6 +15,11 @@ linux
 linux-firmware
 mkinitcpio
 
+# Build toolchain. gcc comes in via base-devel anyway, but it is declared
+# explicitly because the split rule names it: nix must never provide the
+# compiler, since a /nix/store gcc shadows the system one and breaks makepkg.
+gcc
+
 # Filesystem / disk
 btrfs-progs
 

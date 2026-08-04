@@ -31,8 +31,12 @@ pacman sync → submodules → `~/.gitconfig.local` → `home-manager switch` �
 remove pacman packages nix replaced → enable `podman.socket` → install the
 root-level GC timer.
 
-`--check` audits pacman against `packages/*.txt` in both directions and exits 1
-on drift. Run it when you suspect you `pacman -S`’d something and forgot:
+`--check` audits pacman against `packages/*.txt` and exits 1 on drift. Run it when
+you suspect you `pacman -S`’d something and forgot. It reports four states:
+not installed, installed only as a dependency (a declaration is not really
+satisfied until the install reason is explicit, since a dependency can be removed
+with its parent), explicitly installed but undeclared, and migrated-to-nix but
+still present:
 
 ```bash
 ~/.mico/bootstrap.sh --check
