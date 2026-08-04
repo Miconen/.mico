@@ -143,6 +143,11 @@
         setopt hist_verify
         setopt no_list_ambiguous
 
+        # zsh leaves this off by default (unlike bash), which means a pasted
+        # command with a trailing `# comment` fails with "command not found: #"
+        # or a glob error. On for sanity when copy-pasting.
+        setopt interactive_comments
+
         zstyle ':completion:*' menu select
         zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
       '')

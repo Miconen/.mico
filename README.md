@@ -234,6 +234,57 @@ by this flake and exposed through fontconfig, so point kitty at it:
 font_family Maple Mono NF
 ```
 
+### 10. Install the language toolchains
+
+The flake declares them, but mise still has to fetch them:
+
+```sh
+mise install
+mise ls
+```
+
+---
+
+## Verifying an activation
+
+Run this as a block. No inline comments - `interactive_comments` is enabled by
+this config, but the very first shell after a fresh install may predate it.
+
+```sh
+which -a git eza zoxide lazygit nvim starship mise
+echo "$ZSH_AUTOSUGGEST_STRATEGY"
+bindkey '^[[A'
+git config --get merge.conflictstyle
+git config --get core.pager
+git config --get user.email
+readlink -f ~/.config/nvim
+fc-list | grep -ci maple
+mise ls
+```
+
+Expected:
+
+| check | expected |
+| --- | --- |
+| `which -a` | `~/.nix-profile/bin/...` listed **first** |
+| `ZSH_AUTOSUGGEST_STRATEGY` | `history completion` |
+| `bindkey '^[[A'` | `history-substring-search-up` |
+| `merge.conflictstyle` | `zdiff3` |
+| `core.pager` | a `delta` store path |
+| `user.email` | whatever is in `~/.gitconfig.local` |
+| `readlink -f ~/.config/nvim` | `/home/miso/.mico/.config/nvim` |
+| `fc-list \| grep -ci maple` | non-zero |
+| `mise ls` | no `(missing)` entries |
+
+Use `readlink -f`, not plain `readlink`. home-manager points
+`~/.config/nvim` at a symlink inside `home-manager-files` in the store, and
+*that* points at the working tree. Plain `readlink` shows only the first hop and
+looks alarmingly like an immutable store path when it isn't one.
+
+The plugin checks matter because home-manager sources plugins with
+`[[ -f ... ]] && source`, so a wrong path fails **silently** - no error, the
+widgets just don't exist and `bindkey` quietly binds nothing.
+
 ---
 
 ## Day-to-day
