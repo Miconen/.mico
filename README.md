@@ -3,7 +3,8 @@
 Home-manager flake for `miso`. Arch laptop + Arch on WSL.
 
 Nix owns CLI tools and configs. Pacman owns the kernel, drivers, desktop, GUI,
-`gcc`/`base-devel`, the `zsh` binary, `vim`/`nano`, `openssh` and `podman`.
+`gcc`/`base-devel`, the `zsh` binary, `vim`/`nano`, `openssh` and `podman`. AUR
+packages go through paru, declared in `packages/aur-*.txt`.
 Neovim config lives in its own repo as a submodule.
 
 ## Install
@@ -27,9 +28,15 @@ machine you care about.
 ```
 
 It does: btrfs subvolume for `/nix` → install nix → `auto-optimise-store` →
-pacman sync → submodules → `~/.gitconfig.local` → `home-manager switch` →
-remove pacman packages nix replaced → enable `podman.socket` → install the
-root-level GC timer.
+pacman sync → build paru → AUR sync → submodules → `~/.gitconfig.local` →
+`home-manager switch` → remove pacman packages nix replaced → enable
+`podman.socket` → install the root-level GC timer.
+
+AUR packages are separate because `pacman -S` cannot install them. paru itself is
+AUR-only, so it is not installable by an AUR helper or by pacman — bootstrap
+builds `paru-bin` with `makepkg` once, then uses paru for the rest.
+`paru-bin` rather than `paru` avoids dragging a Rust toolchain onto every
+machine.
 
 `--check` audits pacman against `packages/*.txt` and exits 1 on drift. Run it when
 you suspect you `pacman -S`’d something and forgot. It reports four states:
@@ -218,6 +225,7 @@ flake.nix            nixpkgs unstable + home-manager master, devShell, checks
 home/                zsh, starship, git, fzf, mise, tools, nix-gc
 hosts/               arch.nix, wsl.nix
 config/              verbatim: zellij, tmux, kitty, bat theme
-packages/            pacman lists: common, arch, wsl, migrated
+packages/            repo lists: common, arch, wsl, migrated
+                     AUR lists: aur-common, aur-arch, aur-wsl
 .config/nvim         submodule → Miconen/nvim
 ```

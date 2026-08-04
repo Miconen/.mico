@@ -1,20 +1,14 @@
-# Packages pacman owns inside WSL only.
+# Packages pacman owns inside WSL only. Official repos only - AUR entries live
+# in packages/aur-wsl.txt.
 #
 # UNTESTED - derived from the old packages/packages.txt manifest of the previous
 # Arch-on-WSL install.
 
-# Direct3D12 Mesa driver, the only GPU path available under WSL
+# Direct3D12 Mesa driver, the only GPU path available under WSL.
+# mesa is also the VA-API provider since libva-mesa-driver was merged into it.
 vulkan-dzn
 vulkan-icd-loader
 mesa
-
-# Bridges SSH_AUTH_SOCK to the Windows ssh-agent. hosts/wsl.nix evals this at
-# shell startup and disables keychain in its favour.
-# NOTE: AUR package, so paru must be installed first.
-wsl2-ssh-agent
-
-# AUR helper
-paru
 
 # Was in the previous WSL manifest; drop it if you no longer need a local
 # database server.

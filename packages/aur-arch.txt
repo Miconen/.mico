@@ -1,0 +1,3 @@
+# AUR packages for the Arch laptop only. Nothing yet.
+#
+# Add a line and re-run ./bootstrap.sh; it is installed with paru.

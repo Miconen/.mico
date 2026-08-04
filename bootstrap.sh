@@ -109,7 +109,14 @@ if (( CHECK_ONLY )); then
   command -v pacman >/dev/null || die "pacman not found, nothing to check"
 
   mapfile -t declared < <(
-    { read_list "$REPO/packages/common.txt"; read_list "$REPO/packages/$HOST.txt"; } | sort -u
+    {
+      read_list "$REPO/packages/common.txt"
+      read_list "$REPO/packages/$HOST.txt"
+      # AUR packages show up in `pacman -Qqe` like anything else, so they have to
+      # count as declared or they would be reported as drift forever.
+      read_list "$REPO/packages/aur-common.txt"
+      read_list "$REPO/packages/aur-$HOST.txt"
+    } | sort -u
   )
   mapfile -t migrated < <(read_list "$REPO/packages/migrated.txt" | sort -u)
   mapfile -t installed < <(pacman -Qq | sort -u)
@@ -142,7 +149,7 @@ if (( CHECK_ONLY )); then
     drift=1
     warn "declared but NOT installed (${#missing[@]}):"
     printf '      %s\n' "${missing[@]}"
-    printf '      fix: ./bootstrap.sh   (AUR entries need paru -S)\n'
+    printf '      fix: ./bootstrap.sh\n'
   else
     ok "all ${#declared[@]} declared packages are installed"
   fi
@@ -333,9 +340,10 @@ else
     ok "all ${#wanted[@]} declared system packages already installed"
   else
     ok "installing ${#missing[@]} missing: ${missing[*]}"
-    # --needed makes this safe to repeat; AUR packages will fail here and need paru
+    # --needed makes this safe to repeat. AUR packages are NOT handled here; they
+    # live in packages/aur-*.txt and are installed by paru in a later phase.
     run sudo pacman -S --needed --noconfirm -- "${missing[@]}" \
-      || warn "some packages failed - AUR entries (e.g. wsl2-ssh-agent) need: paru -S <pkg>"
+      || warn "some packages failed - check the names are in the official repos"
   fi
 
   # A declared package that is only present as somebody else's dependency can be
@@ -346,6 +354,79 @@ else
     ok "marking ${#dep_only[@]} dependency-only as explicit: ${dep_only[*]}"
     run sudo pacman -D --asexplicit -- "${dep_only[@]}" \
       || warn "could not update install reasons"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 4b. AUR helper
+#     paru is an AUR package, so no AUR helper can install it - `pacman -S paru`
+#     does not work either, it is not in the official repos. It has to be built
+#     directly with makepkg once, after which it manages everything else.
+#
+#     paru-bin, not paru: paru-bin ships a prebuilt binary, whereas paru builds
+#     from source and would pull a full Rust toolchain onto every new machine.
+# ---------------------------------------------------------------------------
+step "AUR helper"
+
+AUR_HELPER_PKG=paru-bin
+
+if (( ! DO_PACMAN )); then
+  skip "--no-pacman given"
+elif ! command -v pacman >/dev/null; then
+  skip "pacman not found"
+elif command -v paru >/dev/null; then
+  skip "paru already installed ($(paru --version 2>/dev/null | head -1))"
+elif (( DRY )); then
+  warn "would build and install $AUR_HELPER_PKG from the AUR with makepkg"
+else
+  # makepkg refuses to run as root, which is one reason this script does too.
+  # base-devel and git come from packages/common.txt, installed above.
+  if ! command -v makepkg >/dev/null; then
+    warn "makepkg missing - install base-devel first, then re-run"
+  else
+    ok "building $AUR_HELPER_PKG from the AUR"
+    aur_tmp="$(mktemp -d)"
+    if git clone --depth 1 "https://aur.archlinux.org/${AUR_HELPER_PKG}.git" "$aur_tmp/$AUR_HELPER_PKG" \
+      && ( cd "$aur_tmp/$AUR_HELPER_PKG" && makepkg -si --noconfirm ); then
+      ok "paru installed"
+    else
+      warn "could not build $AUR_HELPER_PKG - AUR packages will be skipped"
+    fi
+    rm -rf "$aur_tmp"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 4c. AUR packages
+# ---------------------------------------------------------------------------
+step "AUR packages"
+
+if (( ! DO_PACMAN )); then
+  skip "--no-pacman given"
+elif ! command -v pacman >/dev/null; then
+  skip "pacman not found"
+else
+  mapfile -t aur_wanted < <(
+    { read_list "$REPO/packages/aur-common.txt"; read_list "$REPO/packages/aur-$HOST.txt"; } | sort -u
+  )
+
+  aur_missing=()
+  for p in "${aur_wanted[@]}"; do
+    if ! pacman -Qq -- "$p" &>/dev/null; then
+      aur_missing+=("$p")
+    fi
+  done
+
+  if (( ${#aur_wanted[@]} == 0 )); then
+    skip "no AUR packages declared"
+  elif (( ${#aur_missing[@]} == 0 )); then
+    ok "all ${#aur_wanted[@]} declared AUR packages already installed"
+  elif ! command -v paru >/dev/null; then
+    warn "paru unavailable, skipping: ${aur_missing[*]}"
+  else
+    ok "installing ${#aur_missing[@]} from the AUR: ${aur_missing[*]}"
+    run paru -S --needed --noconfirm -- "${aur_missing[@]}" \
+      || warn "some AUR packages failed"
   fi
 fi
 

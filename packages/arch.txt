@@ -80,9 +80,6 @@ fuse2
 # Browser
 firefox
 
-# AUR helper
-paru
-
 # Still used to manage nothing in particular now that dotfiles moved to nix,
 # but harmless to keep around while the migration settles.
 stow
