@@ -3,76 +3,89 @@
 // Referenced by `default_layout "default"` in config.kdl, which is what the
 // shell's `zellij attach --create main` picks up - `attach` cannot take --layout.
 //
-// NOTE: in a layout file everything must live inside the top-level `layout`
-// node, including tab_template and the swap layouts. The flat form shown by
-// `zellij setup --dump-swap-layout` is a different schema, for standalone
-// .swap.kdl files only.
+// Two things here are load-bearing and were learned the hard way:
+//
+// 1. `default_tab_template`, NOT `tab_template name="ui"`. A named template only
+//    applies to tabs written out in this file. Tabs you create at runtime use
+//    zellij's `new_tab_template`, which only `default_tab_template` populates.
+//    With a named template, `zellij action dump-layout` on a live session showed
+//    `new_tab_template { }` - empty - which is exactly why new tabs had no bar.
+//
+// 2. Everything lives inside the top-level `layout` node, including the swap
+//    layouts. The flat form printed by `zellij setup --dump-swap-layout` is a
+//    different schema, for standalone .swap.kdl files.
+//
+// Verified by starting a background session and dumping its live layout, not by
+// `zellij setup --check` - that parser is more permissive and accepted a layout
+// which a real session start rejected.
 layout {
   // compact-bar instead of zellij's default tab-bar + status-bar pair, so the
-  // UI costs one row rather than two.
-  tab_template name="ui" {
+  // UI costs one row rather than two. The bare `tab` nodes below, including the
+  // ones inside the swap layouts, all inherit this.
+  default_tab_template {
     pane size=1 borderless=true {
       plugin location="zellij:compact-bar"
     }
     children
   }
 
-  ui {
-    pane
-  }
+  tab
 
-  // Swap layouts, cycled with Alt-[ and Alt-].
-  //
-  // config.kdl has bound those two keys since day one, but with no
-  // swap_tiled_layout defined they did nothing at all. These are zellij's own
-  // defaults, re-templated onto compact-bar.
+  // Swap layouts, cycled with Alt-, and Alt-. (see config.kdl for why not
+  // Alt-[ / Alt-]). These are zellij's own defaults, with `ui` replaced by bare
+  // `tab` so they pick up default_tab_template rather than needing a duplicate
+  // template definition.
   swap_tiled_layout name="vertical" {
-    ui max_panes=5 {
+    tab max_panes=5 {
       pane split_direction="vertical" {
         pane
-        pane { children; }
+        pane {
+          children
+        }
       }
     }
-    ui max_panes=8 {
+    tab max_panes=8 {
       pane split_direction="vertical" {
-        pane { children; }
-        pane { pane; pane; pane; pane; }
-      }
-    }
-    ui max_panes=12 {
-      pane split_direction="vertical" {
-        pane { children; }
-        pane { pane; pane; pane; pane; }
-        pane { pane; pane; pane; pane; }
+        pane {
+          children
+        }
+        pane {
+          pane
+          pane
+          pane
+          pane
+        }
       }
     }
   }
 
   swap_tiled_layout name="horizontal" {
-    ui max_panes=4 {
+    tab max_panes=4 {
       pane
       pane
     }
-    ui max_panes=8 {
+    tab max_panes=8 {
       pane {
-        pane split_direction="vertical" { children; }
-        pane split_direction="vertical" { pane; pane; pane; pane; }
-      }
-    }
-    ui max_panes=12 {
-      pane {
-        pane split_direction="vertical" { children; }
-        pane split_direction="vertical" { pane; pane; pane; pane; }
-        pane split_direction="vertical" { pane; pane; pane; pane; }
+        pane split_direction="vertical" {
+          children
+        }
+        pane split_direction="vertical" {
+          pane
+          pane
+          pane
+          pane
+        }
       }
     }
   }
 
   swap_tiled_layout name="stacked" {
-    ui min_panes=5 {
+    tab min_panes=5 {
       pane split_direction="vertical" {
         pane
-        pane stacked=true { children; }
+        pane stacked=true {
+          children
+        }
       }
     }
   }

@@ -85,6 +85,11 @@
 
           # CI workflow YAML
           actionlint
+
+          # ci/zellij-check.sh starts a real session to validate the config and
+          # layout, because `zellij setup --check` is too permissive to catch
+          # an empty new_tab_template.
+          zellij
         ];
       };
 

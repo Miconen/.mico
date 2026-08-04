@@ -50,6 +50,8 @@ run_check shellcheck wrap shellcheck --external-sources "${sh_files[@]}"
 # existing style of putting `||` on the continuation line.
 run_check shfmt wrap shfmt --diff --simplify --indent 2 --binary-next-line "${sh_files[@]}"
 
+run_check zellij ./ci/zellij-check.sh
+
 if ((${#workflow_files[@]})); then
   run_check actionlint wrap actionlint "${workflow_files[@]}"
 else

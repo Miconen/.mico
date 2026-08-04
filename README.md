@@ -110,7 +110,8 @@ CI builds both hosts on every push. Lint runs via `ci/lint.sh`, which also works
 locally:
 
 ```bash
-./ci/lint.sh      # nixfmt --check, statix, deadnix
+./ci/lint.sh          # nixfmt, statix, deadnix, shellcheck, shfmt, actionlint, zellij
+./ci/zellij-check.sh  # starts a real session and asserts on the live layout
 ```
 
 Lint is advisory while `continue-on-error: true` is set on that job in
@@ -151,15 +152,25 @@ Want: nix paths first, `history completion`, `history-substring-search-up`,
 ```
 Ctrl-g   lock / unlock (pass keys straight through to the terminal)
 Ctrl-p   pane      Ctrl-t   tab       Ctrl-n   resize
-Ctrl-s   scroll    Ctrl-m   move
+Ctrl-s   scroll    Ctrl-m   move      (in tab mode: , / . break pane left/right)
 Alt-d    detach            Ctrl-q   quit (DESTROYS the session)
-Alt-[ / Alt-]     cycle swap layouts
+Alt-, / Alt-.     cycle swap layouts   (Alt-[ / Alt-] also work)
 Alt-h/j/k/l       move focus        Alt-n   new pane
 ```
+
+Bindings avoid `[` and `]` as primaries: on a Finnish ISO keyboard those are
+AltGr+8 / AltGr+9, so `Alt-[` is effectively unreachable. `,` and `.` are
+unshifted and adjacent. The bracket forms are kept as secondary bindings.
 
 **Tab names follow the project automatically.** A `chpwd` hook renames the tab to
 the git repo name, or the directory name outside a repo, or `~` at home. No
 keybind and nothing to run. It skips the subprocess when the name has not changed.
+
+**New tabs get the status bar via `default_tab_template`.** A named
+`tab_template` only applies to tabs written into the layout file; tabs created at
+runtime use zellij's `new_tab_template`, which only `default_tab_template`
+populates. `zellij action dump-layout` on a live session showed
+`new_tab_template { }` - empty - which is why new tabs had no bar.
 
 **`on_force_close "detach"`.** This fires when the terminal holding the session is
 closed. It used to be `"quit"`, which destroyed the session on every window close
