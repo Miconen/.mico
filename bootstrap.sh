@@ -238,12 +238,16 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 5. submodules (neovim config)
+# 5. submodules (neovim config + the four zsh plugins)
+#    zsh sources the plugins straight from the working tree, so this is no
+#    longer cosmetic - an uninitialised submodule means no syntax highlighting,
+#    no autosuggestions and no history substring search.
 # ---------------------------------------------------------------------------
 step "Submodules"
 
-if [[ -n "$(ls -A "$REPO/.config/nvim" 2>/dev/null)" ]]; then
-  skip "nvim submodule already populated"
+# `submodule status` prefixes uninitialised entries with '-'
+if ! git -C "$REPO" submodule status --recursive 2>/dev/null | grep -q '^-'; then
+  skip "all submodules already initialised"
 else
   ok "initialising submodules"
   # .gitmodules uses SSH URLs. On a fresh machine there may be no key yet, so
@@ -251,7 +255,8 @@ else
   run git -C "$REPO" \
     -c url."https://github.com/".insteadOf="git@github.com:" \
     submodule update --init --recursive \
-    || warn "submodule init failed - run it manually once SSH keys are set up"
+    || warn "submodule init failed - zsh plugins will be missing until you run
+       git -C ~/.mico submodule update --init --recursive"
 fi
 
 # ---------------------------------------------------------------------------
