@@ -50,7 +50,14 @@ run_check shellcheck wrap shellcheck --external-sources "${sh_files[@]}"
 # existing style of putting `||` on the continuation line.
 run_check shfmt wrap shfmt --diff --simplify --indent 2 --binary-next-line "${sh_files[@]}"
 
-run_check zellij ./ci/zellij-check.sh
+# Cannot go through wrap(): that inspects its first argument with `command -v`,
+# which succeeds for an executable path and would run the script outside the
+# devShell - exactly how CI failed, with zellij missing from PATH.
+if command -v zellij >/dev/null; then
+  run_check zellij ./ci/zellij-check.sh
+else
+  run_check zellij nix develop --command ./ci/zellij-check.sh
+fi
 
 if ((${#workflow_files[@]})); then
   run_check actionlint wrap actionlint "${workflow_files[@]}"
