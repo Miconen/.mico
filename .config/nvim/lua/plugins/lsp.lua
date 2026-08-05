@@ -128,8 +128,11 @@ return {
 					map("<leader>lD", function()
 						Snacks.picker.lsp_type_definitions()
 					end, "Type definition")
+					-- lsp_symbols, not lsp_document_symbols. The latter has never been a
+					-- registered Snacks picker source, so this bind errored rather than
+					-- opening anything.
 					map("<leader>ls", function()
-						Snacks.picker.lsp_document_symbols()
+						Snacks.picker.lsp_symbols()
 					end, "Document symbols")
 					map("<leader>lS", function()
 						Snacks.picker.lsp_workspace_symbols()
