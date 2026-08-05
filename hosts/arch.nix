@@ -1,4 +1,5 @@
 {
+  config,
   ...
 }:
 {
@@ -22,23 +23,26 @@
   xdg.configFile."kitty/kitty.conf".source = ../config/kitty/kitty.conf;
 
   # ---------------------------------------------------------------------------
-  # Syncthing - PHASE 1: service only, no devices and no folders yet.
+  # Syncthing - PHASE 2: laptop <-> phone.
   #
   # Deliberately laptop-only. WSL is excluded because syncing into a VHDX that
   # spends most of its life powered off achieves nothing, and the Windows host is
   # the right place to run Syncthing for that machine.
   #
-  # This is also the one service nix owns. It is a per-user data daemon running as
-  # a systemd --user unit, not a system service, so it stays on the nix side of
-  # the split rule - but it IS an exception worth knowing about.
+  # This is the one service nix owns. It is a per-user data daemon running as a
+  # systemd --user unit, not a system service, so it stays on the nix side of the
+  # split rule - but it IS an exception worth knowing about.
   #
-  # Pairing is declarative, not click-through: put a device's ID in `devices`
-  # below and activate. Do NOT accept devices or folders in the web UI -
-  # overrideDevices and overrideFolders both default to true, so anything added by
-  # hand is deleted on the next `hms`.
+  # Pairing is declarative, not click-through: put a device's ID in `devices` and
+  # activate. Do NOT accept devices or folders in the web UI - overrideDevices and
+  # overrideFolders both default to true, so anything added by hand is deleted on
+  # the next `hms`.
   #
-  # Next step: read this machine's ID from http://127.0.0.1:8384 (Actions ->
-  # Show ID) and add it, plus the phone's, under `devices`.
+  # This machine's own device ID does not need declaring. Verified against a live
+  # instance: submitting a folder that lists only the phone came back normalised
+  # to [phone, local], because Syncthing inserts the local device itself.
+  #
+  # Phase 3 adds the desktop and a bidirectional `phone-camera` folder.
   # ---------------------------------------------------------------------------
   services.syncthing = {
     enable = true;
@@ -56,15 +60,48 @@
       options = {
         # -1 is "declined", which also stops Syncthing prompting about it.
         urAccepted = -1;
+
+        # This laptop has 7G of RAM with roughly 2G available and swap already in
+        # use, and Syncthing holds its index in memory. Scanning one folder at a
+        # time trades a little speed for a lower peak.
+        maxFolderConcurrency = 1;
       };
 
-      # Phase 2 adds the phone here, Phase 3 the desktop. Device IDs are public
-      # keys, so committing them is fine.
-      devices = { };
+      # Device IDs are public keys, so committing them is fine.
+      devices.phone.id = "3A5SBCS-TY35O3C-NZS6Q2S-RHUP5IV-KIAAQ5E-HOVWHZT-NMUHPDV-D3FY7Q5";
 
-      # Phase 2: documents -> ~/Documents, shared -> ~/Sync.
-      # Phase 3: phone-camera, bidirectional with trashcan versioning.
-      folders = { };
+      folders = {
+        # Bidirectional, since the phone relays laptop <-> desktop changes once
+        # the desktop joins in Phase 3.
+        #
+        # trashcan versioning is a 30-day undo window, not an archive: Syncthing
+        # only versions files it removes on your behalf, so a deletion you make
+        # locally is still a deletion. It does protect against the *other* device
+        # deleting something you wanted.
+        documents = {
+          id = "documents";
+          path = "${config.home.homeDirectory}/Documents";
+          devices = [ "phone" ];
+          type = "sendreceive";
+          versioning = {
+            type = "trashcan";
+            params.cleanoutDays = "30";
+          };
+        };
+
+        # Syncthing creates a missing folder path and its .stfolder marker itself,
+        # verified against a live instance, so ~/Sync needs no activation step.
+        shared = {
+          id = "shared";
+          path = "${config.home.homeDirectory}/Sync";
+          devices = [ "phone" ];
+          type = "sendreceive";
+          versioning = {
+            type = "trashcan";
+            params.cleanoutDays = "30";
+          };
+        };
+      };
     };
   };
 }

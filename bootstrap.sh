@@ -698,6 +698,22 @@ else
     warn "nix-gc.timer not active - it is created by home-manager, so"
     warn "run 'systemctl --user daemon-reload' and re-check"
   fi
+
+  # Syncthing is declared in hosts/arch.nix, so home-manager creates AND starts
+  # the unit during activation - this deliberately does not `systemctl enable` it,
+  # which would fight home-manager for ownership. It only reports, and only on
+  # hosts where the unit is supposed to exist.
+  if [[ $HOST == "wsl" ]]; then
+    skip "syncthing is not configured on WSL by design"
+  elif ! systemctl --user list-unit-files syncthing.service &>/dev/null \
+    || [[ -z "$(systemctl --user list-unit-files --no-legend syncthing.service 2>/dev/null)" ]]; then
+    warn "syncthing.service missing - run 'hms' first, home-manager creates it"
+  elif systemctl --user is-active syncthing.service &>/dev/null; then
+    ok "syncthing.service running (GUI at http://127.0.0.1:8384)"
+  else
+    ok "starting syncthing.service"
+    run systemctl --user start syncthing.service || warn "could not start syncthing"
+  fi
 fi
 
 # ---------------------------------------------------------------------------

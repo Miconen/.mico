@@ -221,16 +221,24 @@ public keys, so committing them is fine.
 GUI is `127.0.0.1:8384`, localhost only, so no password is needed - which also
 means no secret ever has to live in this public repo.
 
-### Status: Phase 1 done
+### Status: Phase 2 done
 
 | phase | what |
 | --- | --- |
-| 1 done | service only, no devices, no folders |
-| 2 | pair the phone; `documents` -> `~/Documents`, `shared` -> `~/Sync` |
-| 3 | add the desktop; `phone-camera`, bidirectional with trashcan versioning |
+| 1 done | service only |
+| 2 done | phone paired; `documents` -> `~/Documents`, `shared` -> `~/Sync`, both bidirectional with 30-day trashcan |
+| 3 | add the desktop; `phone-camera`, bidirectional with trashcan |
 
-Next step: read this machine's ID at http://127.0.0.1:8384 under
-**Actions -> Show ID**, then add it and the phone's to `devices`.
+**This machine's own device ID does not need declaring.** Verified against a live
+instance: a folder submitted listing only the phone came back normalised to
+`[phone, local]`, because Syncthing inserts the local device itself.
+
+`~/Sync` is created by Syncthing along with its `.stfolder` marker, also verified,
+so there is no activation step for it.
+
+On the phone, accept the two folder shares when they appear. `bootstrap.sh`
+reports on the service but deliberately does not `systemctl enable` it -
+home-manager owns the unit.
 
 ### Things that will bite you
 
@@ -247,6 +255,10 @@ Next step: read this machine's ID at http://127.0.0.1:8384 under
   deletion propagates. `trashcan` versioning with a 30-day window makes a
   mis-click recoverable from `.stversions`, but Syncthing does not version
   deletions you originate locally. Real photo backup is a separate job.
+- **Memory.** This laptop has 7G with ~2G available and swap already in use, and
+  Syncthing keeps its index in RAM. `maxFolderConcurrency = 1` trades scan speed
+  for a lower peak. If `~/Documents` is large, watch
+  `systemctl --user status syncthing` for RSS.
 - RuneLite is deliberately **not** synced here; its own profile sync handles it,
   which also keeps `credentials.properties` off the phone.
 
