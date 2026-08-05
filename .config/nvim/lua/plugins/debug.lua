@@ -137,17 +137,33 @@ return {
 			-- (no extra split when terminal.hide = true and console is in winbar.sections).
 			local js_debug = vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
 			if vim.uv.fs_stat(js_debug) or vim.fn.filereadable(js_debug) == 1 then
-				dap.adapters["pwa-node"] = {
-					type = "server",
-					-- 127.0.0.1 avoids localhost→IPv6 disconnects on some systems
-					host = "127.0.0.1",
-					port = "${port}",
-					executable = {
-						command = "node",
-						args = { js_debug, "${port}" },
-					},
-				}
-				dap.adapters["pwa-chrome"] = dap.adapters["pwa-node"]
+				-- Pick a real free port. Some nvim-dap builds leave "${port}" unexpanded in the
+				-- connect address ("couldn't connect to 127.0.0.1:${port}").
+				local function free_port()
+					local uv = vim.uv or vim.loop
+					local server = uv.new_tcp()
+					assert(server, "uv.new_tcp failed")
+					assert(server:bind("127.0.0.1", 0))
+					local sock = server:getsockname()
+					server:close()
+					return sock.port
+				end
+
+				local function pwa_adapter(callback)
+					local port = free_port()
+					callback({
+						type = "server",
+						host = "127.0.0.1",
+						port = port,
+						executable = {
+							command = "node",
+							args = { js_debug, tostring(port) },
+						},
+					})
+				end
+
+				dap.adapters["pwa-node"] = pwa_adapter
+				dap.adapters["pwa-chrome"] = pwa_adapter
 
 				local source_maps = {
 					sourceMaps = true,
