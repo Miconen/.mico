@@ -111,8 +111,15 @@ return {
 						Snacks.picker.lsp_implementations()
 					end, "Goto implementation")
 					map("gD", vim.lsp.buf.declaration, "Goto declaration")
-					map("ge", vim.diagnostic.goto_next, "Next diagnostic")
-					map("gE", vim.diagnostic.goto_prev, "Previous diagnostic")
+					-- goto_next/goto_prev are vim.deprecate(..., "0.13"), i.e. removed in the
+					-- next release. jump() is the replacement; float = true reproduces what
+					-- goto_next did by default.
+					map("ge", function()
+						vim.diagnostic.jump({ count = 1, float = true })
+					end, "Next diagnostic")
+					map("gE", function()
+						vim.diagnostic.jump({ count = -1, float = true })
+					end, "Previous diagnostic")
 
 					-- LSP actions (<leader>l group label set in keymaps/lsp.lua)
 					map("<leader>lD", function()
@@ -131,7 +138,10 @@ return {
 
 					-- Document highlight on cursor hold
 					local client = vim.lsp.get_client_by_id(event.data.client_id)
-					if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
+					-- client:supports_method, not client.supports_method. The dot form still
+					-- works via a compatibility shim in 0.12, but that shim calls
+					-- vim.deprecate(..., "0.13") and goes away in the next release.
+					if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
 						local hl_group = vim.api.nvim_create_augroup("lsp_highlight_" .. buf, { clear = true })
 						vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
 							buffer = buf,

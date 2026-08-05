@@ -9,7 +9,8 @@ autocmd("TextYankPost", {
 	group = augroup("highlight_yank", { clear = true }),
 	desc = "Highlight when yanking text",
 	callback = function()
-		vim.highlight.on_yank()
+		-- vim.highlight is deprecated in favour of vim.hl (removed in 2.0.0).
+		vim.hl.on_yank()
 	end,
 })
 
