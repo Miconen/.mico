@@ -77,6 +77,11 @@
       # symlink into the nix store. Edit the source of truth instead.
       zshconf = "nvim ${repoPath}/home/zsh.nix";
       nixconf = "nvim ${repoPath}/flake.nix";
+      pkgconf = "nvim ${repoPath}/home/common.nix";
+      # Find a package by name or description before declaring it.
+      nsearch = "nix search nixpkgs";
+      # Which package provides a given binary, e.g. `nwhich bin/ffmpeg`.
+      nwhich = "nix-locate";
       ".vimrc" = "nvim ~/.config/nvim";
       nvimdiff = "nvim -d";
       # Structural diff. delta stays the git pager; this is for "what actually

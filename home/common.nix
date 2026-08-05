@@ -147,16 +147,21 @@
   # Neovim config is still its own repo (Miconen/nvim), tracked as a submodule
   # at .config/nvim. mkOutOfStoreSymlink points at the working tree rather than
   # the nix store, so lazy.nvim and Mason can still write lazy-lock.json etc.
-  # Requires: git -C ${repoPath} submodule update --init --recursive
+  # Neovim config lives in this repo at .config/nvim (imported with git subtree,
+  # so its history came along). mkOutOfStoreSymlink points at the working tree
+  # rather than the nix store, which is required: lazy.nvim writes lazy-lock.json
+  # into the config directory, and a store path is read-only.
+  #
+  # Consequence: plugin updates show up as a modified lazy-lock.json in `git
+  # status` here. That is the lockfile doing its job - commit it.
   xdg.configFile."nvim".source = config.lib.file.mkOutOfStoreSymlink "${repoPath}/.config/nvim";
 
-  # The symlink above happily points at an empty directory if the submodule was
-  # never initialised, which shows up as "neovim has no config" rather than as
-  # an error. Warn loudly instead.
-  home.activation.checkNvimSubmodule = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # Guards against the symlink pointing at nothing, which presents as "neovim has
+  # no config" rather than as an error.
+  home.activation.checkNvimConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     nvimSrc="${repoPath}/.config/nvim"
-    if [ -z "$(ls -A "$nvimSrc" 2>/dev/null)" ]; then
-      warnEcho "nvim submodule is empty. Run: git -C ${repoPath} submodule update --init --recursive"
+    if [ ! -f "$nvimSrc/init.lua" ]; then
+      warnEcho "nvim config missing at $nvimSrc - is the repo checkout complete?"
     fi
   '';
 }

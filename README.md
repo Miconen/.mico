@@ -5,7 +5,7 @@ Home-manager flake for `miso`. Arch laptop + Arch on WSL.
 Nix owns CLI tools and configs. Pacman owns the kernel, drivers, desktop, GUI,
 `gcc`/`base-devel`, the `zsh` binary, `vim`/`nano`, `openssh` and `podman`. AUR
 packages go through paru, declared in `packages/aur-*.txt`.
-Neovim config lives in its own repo as a submodule.
+The neovim config lives here too, at `.config/nvim`.
 
 ## Install
 
@@ -28,8 +28,7 @@ machine you care about.
 ```
 
 It does: btrfs subvolume for `/nix` → install nix → `auto-optimise-store` →
-pacman sync → pacman.conf → build paru → AUR sync → submodules →
-`~/.gitconfig.local` → `home-manager switch` → remove pacman packages nix
+pacman sync → pacman.conf → build paru → AUR sync → `~/.gitconfig.local` → `home-manager switch` → remove pacman packages nix
 replaced → `podman.socket` → system maintenance timers → root-level GC timer.
 
 The maintenance timers are all off by default on Arch: `fstrim.timer` (SSD TRIM),
@@ -70,12 +69,68 @@ appendWindowsPath=false
 stops Windows PATH shadowing nix binaries, but costs you `code` and
 `explorer.exe` in the shell.
 
+## Neovim
+
+Config lives at `.config/nvim`, imported with `git subtree` so all 16 commits of
+its history came with it. `~/.config/nvim` is an out-of-store symlink to the
+working tree, which is required: lazy.nvim writes `lazy-lock.json` into the config
+directory and a store path is read-only. Plugin updates therefore show up as a
+modified lockfile in `git status` - commit it.
+
+CI runs `stylua --check` and `selene`, matching the tools already in the
+mason-tool-installer list. Both are configured for zero findings, so anything new
+is a real signal:
+
+- `stylua.toml` writes out stylua's defaults explicitly, so a future release
+  changing one cannot silently reformat everything. Tabs, because 17 of 20 files
+  already used tabs; the other three were normalised on import.
+- `selene.toml` + `vim.yml` define the Neovim standard library. `Snacks` is
+  declared as a global, otherwise snacks.nvim usage alone produced 37 undefined
+  variable errors.
+- `mixed_table` and `multiple_statements` are allowed: lazy.nvim specs are
+  `{ "owner/repo", opt = x }` by definition, and `function() thing() end` inline in
+  a keymap is the standard idiom.
+
+**One trap worth knowing**, documented in `lua/plugins/lsp.lua`: selene reported
+the top-level `local map = vim.keymap.set` as unused. It is not. A Lua local is not
+in scope until after its own statement, so the `map(...)` call inside the inner
+`local map = function(...)` resolves to the outer binding. Verified with luajit -
+deleting that line would break every LSP keymap.
+
+## Adding a package
+
+Try it first without installing anything - `comma` runs it straight from nixpkgs:
+
+```bash
+, cowsay hello              # one-off, nothing persisted
+nsearch ripgrep             # nix search nixpkgs ripgrep
+nwhich bin/ffmpeg           # nix-locate: which package provides this binary
+```
+
+If you want to keep it, add one line to `home.packages`:
+
+```bash
+pkgconf                     # opens home/common.nix
+hms
+```
+
+That is the whole workflow. Two rules:
+
+- **Never `nix profile install`.** It is invisible to this repo and drifts between
+  machines. `comma` and `nix shell nixpkgs#foo` cover the throwaway case.
+- **If a tool has a `programs.*` module, prefer it** over `home.packages`. The
+  module manages config too, which is the difference between btop keeping its
+  settings across machines and btop writing its own file on first run. Check with
+  `man home-configuration.nix` or search the home-manager options site.
+
+Adding a **new file** under `home/` also needs `git add`, because flakes ignore
+untracked files - nix will tell you so by name if you forget.
+
 ## Daily
 
 ```bash
 hms                              # nh home switch + syntax check + exec zsh
 nix flake update                 # bump nixpkgs + home-manager, then hms
-git submodule update --remote    # bump nvim, then hms
 home-manager generations         # list rollback targets
 , cowsay hi                      # run a package without installing it
 nix-locate bin/ffmpeg            # which package provides this file
@@ -305,9 +360,8 @@ anything on the laptop side - `overrideFolders` reverts it.
 **`readlink ~/.config/nvim` shows a store path.** Expected. It's a chain:
 `~/.config/nvim` → store symlink → working tree. Use `readlink -f`.
 
-**Neovim has no config.** Submodule wasn't initialised.
-`git -C ~/.mico submodule update --init --recursive`. Activation warns about
-this.
+**Neovim has no config.** The symlink at `~/.config/nvim` points into this repo,
+so a partial checkout breaks it. Activation warns if `init.lua` is missing.
 
 **`nix` not found after install.** Arch builds zsh with `--enable-etcdir=/etc/zsh`,
 so the installer's `/etc/zshrc` hook is ignored. Login shells still work via
@@ -447,5 +501,7 @@ hosts/               arch.nix, wsl.nix
 config/              verbatim: zellij, kitty, bat theme
 packages/            repo lists: common, arch, wsl, migrated
                      AUR lists: aur-common, aur-arch, aur-wsl
-.config/nvim         submodule → Miconen/nvim
+.config/nvim         neovim config (imported with git subtree, history intact)
+stylua.toml          Lua formatting
+selene.toml, vim.yml Lua linting + the Neovim std library
 ```

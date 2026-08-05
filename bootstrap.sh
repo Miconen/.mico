@@ -567,31 +567,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 5. submodules (neovim config)
-# ---------------------------------------------------------------------------
-step "Submodules"
-
-# `submodule status` prefixes uninitialised entries with '-'. Capture the output
-# separately from the exit status: if git itself fails (dubious ownership, not a
-# repo, ...) an empty result would otherwise look identical to "nothing to do"
-# and we would silently skip initialising.
-if ! sub_status="$(git -C "$REPO" submodule status --recursive 2>&1)"; then
-  warn "could not read submodule status:"
-  printf '      %s\n' "$sub_status"
-  warn "run: git -C $REPO submodule update --init --recursive"
-elif ! grep -q '^-' <<<"$sub_status"; then
-  skip "all submodules already initialised"
-else
-  ok "initialising submodules"
-  # .gitmodules uses SSH URLs. On a fresh machine there may be no key yet, so
-  # rewrite to HTTPS just for this command rather than failing.
-  run git -C "$REPO" \
-    -c 'url.https://github.com/.insteadOf=git@github.com:' \
-    submodule update --init --recursive \
-    || warn "submodule init failed - run it manually once SSH keys are set up"
-fi
-
-# ---------------------------------------------------------------------------
 # 6. git identity (untracked, because this repo is public)
 # ---------------------------------------------------------------------------
 step "Git identity"

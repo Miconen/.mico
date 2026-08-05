@@ -33,11 +33,21 @@ run_check() {
   fi
 }
 
+# selene exits 0 even when it reports warnings, so its exit status alone is not a
+# usable signal - assert on the summary lines instead.
+selene_clean() {
+  local out
+  out="$(wrap selene .config/nvim 2>&1)" || true
+  printf '%s\n' "$out"
+  printf '%s\n' "$out" | grep -qx '0 errors' && printf '%s\n' "$out" | grep -qx '0 warnings'
+}
+
 # `*.sh` already matches bootstrap.sh at the root - git pathspecs are not
 # anchored - so listing it separately would lint it twice.
 mapfile -t nix_files < <(git ls-files '*.nix')
 mapfile -t sh_files < <(git ls-files '*.sh')
 mapfile -t workflow_files < <(git ls-files '.github/workflows/*.yml' '.github/workflows/*.yaml')
+mapfile -t lua_files < <(git ls-files '*.lua')
 
 run_check nixfmt wrap nixfmt --check "${nix_files[@]}"
 run_check statix wrap statix check
@@ -49,6 +59,11 @@ run_check shellcheck wrap shellcheck --external-sources "${sh_files[@]}"
 # would otherwise want to reformat every line. --binary-next-line matches the
 # existing style of putting `||` on the continuation line.
 run_check shfmt wrap shfmt --diff --simplify --indent 2 --binary-next-line "${sh_files[@]}"
+
+if ((${#lua_files[@]})); then
+  run_check stylua wrap stylua --check .config/nvim
+  run_check selene selene_clean
+fi
 
 # Cannot go through wrap(): that inspects its first argument with `command -v`,
 # which succeeds for an executable path and would run the script outside the
