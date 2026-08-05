@@ -70,6 +70,35 @@ appendWindowsPath=false
 stops Windows PATH shadowing nix binaries, but costs you `code` and
 `explorer.exe` in the shell.
 
+## Adding a package
+
+Try it first without installing anything - `comma` runs it straight from nixpkgs:
+
+```bash
+, cowsay hello              # one-off, nothing persisted
+nsearch ripgrep             # nix search nixpkgs ripgrep
+nwhich bin/ffmpeg           # nix-locate: which package provides this binary
+```
+
+If you want to keep it, add one line to `home.packages`:
+
+```bash
+pkgconf                     # opens home/common.nix
+hms
+```
+
+That is the whole workflow. Two rules:
+
+- **Never `nix profile install`.** It is invisible to this repo and drifts between
+  machines. `comma` and `nix shell nixpkgs#foo` cover the throwaway case.
+- **If a tool has a `programs.*` module, prefer it** over `home.packages`. The
+  module manages config too, which is the difference between btop keeping its
+  settings across machines and btop writing its own file on first run. Check with
+  `man home-configuration.nix` or search the home-manager options site.
+
+Adding a **new file** under `home/` also needs `git add`, because flakes ignore
+untracked files - nix will tell you so by name if you forget.
+
 ## Daily
 
 ```bash
