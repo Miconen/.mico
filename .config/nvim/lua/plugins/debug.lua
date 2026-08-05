@@ -68,13 +68,6 @@ return {
 				desc = "Step out",
 			},
 			{
-				"<leader>dr",
-				function()
-					require("dap").repl.open()
-				end,
-				desc = "Open REPL",
-			},
-			{
 				"<leader>dt",
 				function()
 					require("dap").terminate()
@@ -136,10 +129,10 @@ return {
 
 			-- JS/TS via mason js-debug-adapter (vscode-js-debug).
 			--
-			-- npm scripts spawn a child node/tsx process. Without
-			-- autoAttachChildProcesses the debugger sits on the npm parent:
-			-- "No eligible scopes" and no useful breakpoints.
-			-- resolveSourceMapLocations keeps undici/etc .map ENOENT noise out of the REPL.
+			-- Prefer launching tsx directly over `npm run` + `tsx watch`: the watcher
+			-- parent rarely exposes a paused JS context ("No eligible scopes").
+			-- Do not set console=integratedTerminal — that opens a second split;
+			-- process I/O goes to dap-view's Console section instead.
 			local js_debug = vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
 			if vim.uv.fs_stat(js_debug) or vim.fn.filereadable(js_debug) == 1 then
 				dap.adapters["pwa-node"] = {
@@ -153,11 +146,6 @@ return {
 				}
 				dap.adapters["pwa-chrome"] = dap.adapters["pwa-node"]
 
-				local skip = {
-					"<node_internals>/**",
-					"${workspaceFolder}/node_modules/**",
-					"**/node_modules/**",
-				}
 				local source_maps = {
 					sourceMaps = true,
 					resolveSourceMapLocations = {
@@ -168,7 +156,11 @@ return {
 						"${workspaceFolder}/**/*.(m|c|)js",
 						"!**/node_modules/**",
 					},
-					skipFiles = skip,
+					skipFiles = {
+						"<node_internals>/**",
+						"${workspaceFolder}/node_modules/**",
+						"**/node_modules/**",
+					},
 				}
 
 				local function launch(cfg)
@@ -176,7 +168,8 @@ return {
 						type = "pwa-node",
 						request = "launch",
 						cwd = "${workspaceFolder}",
-						console = "integratedTerminal",
+						-- internalConsole: no extra nvim terminal split (dap-view Console tab)
+						console = "internalConsole",
 						autoAttachChildProcesses = true,
 					}, source_maps, cfg)
 				end
@@ -190,10 +183,29 @@ return {
 				end
 
 				local js_ts = {
+					-- Best for bots/apps with a fixed entry (your tectonic-bot layout)
+					launch({
+						name = "tsx: src/main.ts",
+						runtimeExecutable = "tsx",
+						args = { "${workspaceFolder}/src/main.ts" },
+					}),
+					launch({
+						name = "tsx: current file",
+						runtimeExecutable = "tsx",
+						args = { "${file}" },
+					}),
+					-- Watch restarts children; attach is flaky — use only if you need reload
+					launch({
+						name = "tsx watch: src/main.ts",
+						runtimeExecutable = "tsx",
+						args = { "watch", "${workspaceFolder}/src/main.ts" },
+						restart = true,
+					}),
 					launch({
 						name = "npm: run dev",
 						runtimeExecutable = "npm",
 						runtimeArgs = { "run", "dev" },
+						restart = true,
 					}),
 					launch({
 						name = "npm: start",
@@ -204,11 +216,6 @@ return {
 						name = "npm: test",
 						runtimeExecutable = "npm",
 						runtimeArgs = { "test" },
-					}),
-					launch({
-						name = "tsx: current file",
-						runtimeExecutable = "tsx",
-						args = { "${file}" },
 					}),
 					launch({
 						name = "node: current file (JS only)",
@@ -247,24 +254,35 @@ return {
 			winbar = {
 				show = true,
 				show_keymap_hints = true,
-				sections = { "scopes", "repl" },
+				-- One window: cycle with Tab / 1-4 (see keymaps + base_sections)
+				sections = { "scopes", "watches", "repl", "console" },
 				default_section = "scopes",
+				base_sections = {
+					scopes = { label = "Scopes", keymap = "1" },
+					watches = { label = "Watches", keymap = "2" },
+					repl = { label = "REPL", keymap = "3" },
+					console = { label = "Console", keymap = "4" },
+				},
 			},
 			windows = {
-				-- Vertical sidebar on the right (~1/3 of the editor)
 				position = "right",
 				size = 0.33,
 				terminal = {
-					-- Keep the debug adapter console out of the way
+					-- Console lives in the winbar section above — no separate split
 					hide = true,
 					position = "below",
 					size = 0.25,
 				},
 			},
+			keymaps = {
+				base = {
+					next_view = { "]v", "<Tab>" },
+					prev_view = { "[v", "<S-Tab>" },
+				},
+			},
 		},
 		-- Must shim before require("dap-view"): listeners.lua runs at import time.
 		config = function(_, opts)
-			-- Clear a half-failed require from a previous error in this session.
 			for name in pairs(package.loaded) do
 				if name == "dap-view" or vim.startswith(name, "dap-view.") then
 					package.loaded[name] = nil
