@@ -39,7 +39,6 @@ local parsers = {
 	"tsx",
 	"python",
 	"json",
-	"jsonc",
 	"yaml",
 	"toml",
 	"css",
@@ -61,6 +60,9 @@ return {
 
 			-- Asynchronous, and a no-op for parsers already present.
 			require("nvim-treesitter").install(parsers)
+
+			-- jsonc is not a separate upstream parser; reuse json (comments are tolerated by queries).
+			vim.treesitter.language.register("json", "jsonc")
 
 			-- Highlighting comes from Neovim, not this plugin.
 			--
