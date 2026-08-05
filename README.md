@@ -202,6 +202,54 @@ zellij kill-session main     # if a session gets wedged
 `ZELLIJ_SKIP=1` starts a shell without attaching, for when a multiplexer is in the
 way.
 
+## Syncthing
+
+Laptop only. WSL is excluded on purpose: syncing into a VHDX that is usually
+powered off achieves nothing, and Windows is the right place to run Syncthing for
+that machine.
+
+This is the one service nix owns. It is a per-user data daemon on a
+`systemd --user` unit rather than a system service, so it sits on the nix side of
+the split rule - but it is an exception worth knowing about.
+
+**Pairing is declarative, not click-through.** Put a device ID in
+`services.syncthing.settings.devices` and activate. Do **not** accept devices or
+folders in the web UI: `overrideDevices` and `overrideFolders` both default to
+true, so anything added by hand is deleted on the next `hms`. Device IDs are
+public keys, so committing them is fine.
+
+GUI is `127.0.0.1:8384`, localhost only, so no password is needed - which also
+means no secret ever has to live in this public repo.
+
+### Status: Phase 1 done
+
+| phase | what |
+| --- | --- |
+| 1 done | service only, no devices, no folders |
+| 2 | pair the phone; `documents` -> `~/Documents`, `shared` -> `~/Sync` |
+| 3 | add the desktop; `phone-camera`, bidirectional with trashcan versioning |
+
+Next step: read this machine's ID at http://127.0.0.1:8384 under
+**Actions -> Show ID**, then add it and the phone's to `devices`.
+
+### Things that will bite you
+
+- **Syncthing has no store-and-forward.** Two devices exchange data only while
+  both are online. The public relay servers only help with NAT traversal; they do
+  not hold your files. Laptop and desktop are never on together, so the phone is a
+  member of the shared folders purely so changes can travel through it.
+- **The official Android app was archived in Dec 2024.** Use
+  [Syncthing-Fork](https://github.com/Catfriend1/syncthing-android), and exempt it
+  from battery optimisation or Doze will stall relaying.
+- **Folder IDs must match across devices.** The ID pairs a folder, not the label
+  or the path.
+- **It is not a backup.** The camera folder is bidirectional by choice, so a
+  deletion propagates. `trashcan` versioning with a 30-day window makes a
+  mis-click recoverable from `.stversions`, but Syncthing does not version
+  deletions you originate locally. Real photo backup is a separate job.
+- RuneLite is deliberately **not** synced here; its own profile sync handles it,
+  which also keeps `credentials.properties` off the phone.
+
 ## Fixes
 
 **Plugins silently don't load.** home-manager sources them with
