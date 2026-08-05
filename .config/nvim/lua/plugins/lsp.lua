@@ -328,7 +328,10 @@ return {
 	{
 		"saghen/blink.cmp",
 		event = { "InsertEnter", "CmdlineEnter" },
-		version = "v0.*",
+		-- Pinned to the 1.x tag series rather than the main branch: tagged releases
+		-- ship prebuilt fuzzy-matcher binaries, whereas tracking main means building
+		-- the Rust matcher locally.
+		version = "1.*",
 		dependencies = {
 			"rafamadriz/friendly-snippets",
 			-- Autopairs integration
