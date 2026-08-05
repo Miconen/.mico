@@ -1,84 +1,80 @@
 -- plugins/debug.lua
 local icons = require("keymaps.icons")
 
+local function dap_keys()
+	return {
+		{
+			"<leader>db",
+			function()
+				require("dap").toggle_breakpoint()
+			end,
+			desc = "Toggle breakpoint",
+		},
+		{
+			"<leader>dB",
+			function()
+				require("dap").set_breakpoint(vim.fn.input("Condition: "))
+			end,
+			desc = "Conditional breakpoint",
+		},
+		{
+			"<leader>dc",
+			function()
+				require("dap").continue()
+			end,
+			desc = "Continue",
+		},
+		{
+			"<leader>dn",
+			function()
+				require("dap").step_over()
+			end,
+			desc = "Step over",
+		},
+		{
+			"<leader>di",
+			function()
+				require("dap").step_into()
+			end,
+			desc = "Step into",
+		},
+		{
+			"<leader>do",
+			function()
+				require("dap").step_out()
+			end,
+			desc = "Step out",
+		},
+		{
+			"<leader>dr",
+			function()
+				require("dap").repl.open()
+			end,
+			desc = "Open REPL",
+		},
+		{
+			"<leader>dt",
+			function()
+				require("dap").terminate()
+			end,
+			desc = "Terminate",
+		},
+	}
+end
+
 return {
+	-- nvim-dap-view requires listeners.on_session (nvim-dap >= 2025-06).
+	-- It must NOT be a dependency of nvim-dap: its init requires listeners at
+	-- module load, which races if dap is still loading as the parent plugin.
 	{
 		"mfussenegger/nvim-dap",
 		dependencies = {
-			{
-				"igorlfs/nvim-dap-view",
-				opts = {},
-			},
 			"theHamsta/nvim-dap-virtual-text",
 			"mason-org/mason.nvim",
 			"leoluz/nvim-dap-go",
 			"mfussenegger/nvim-dap-python",
 		},
-		keys = {
-			{
-				"<leader>db",
-				function()
-					require("dap").toggle_breakpoint()
-				end,
-				desc = "Toggle breakpoint",
-			},
-			{
-				"<leader>dB",
-				function()
-					require("dap").set_breakpoint(vim.fn.input("Condition: "))
-				end,
-				desc = "Conditional breakpoint",
-			},
-			{
-				"<leader>dc",
-				function()
-					require("dap").continue()
-				end,
-				desc = "Continue",
-			},
-			{
-				"<leader>dn",
-				function()
-					require("dap").step_over()
-				end,
-				desc = "Step over",
-			},
-			{
-				"<leader>di",
-				function()
-					require("dap").step_into()
-				end,
-				desc = "Step into",
-			},
-			{
-				"<leader>do",
-				function()
-					require("dap").step_out()
-				end,
-				desc = "Step out",
-			},
-			{
-				"<leader>dr",
-				function()
-					require("dap").repl.open()
-				end,
-				desc = "Open REPL",
-			},
-			{
-				"<leader>dt",
-				function()
-					require("dap").terminate()
-				end,
-				desc = "Terminate",
-			},
-			{
-				"<leader>dv",
-				function()
-					require("dap-view").toggle()
-				end,
-				desc = "Toggle DAP view",
-			},
-		},
+		keys = dap_keys(),
 		config = function()
 			local dap = require("dap")
 			require("nvim-dap-virtual-text").setup()
@@ -166,5 +162,19 @@ return {
 				end
 			end
 		end,
+	},
+	{
+		"igorlfs/nvim-dap-view",
+		dependencies = { "mfussenegger/nvim-dap" },
+		keys = {
+			{
+				"<leader>dv",
+				function()
+					require("dap-view").toggle()
+				end,
+				desc = "Toggle DAP view",
+			},
+		},
+		opts = {},
 	},
 }
