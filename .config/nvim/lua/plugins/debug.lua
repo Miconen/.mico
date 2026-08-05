@@ -15,6 +15,65 @@ local function ensure_dap_view_compat()
 	return dap
 end
 
+---True when dap-view's main window is open (safe if plugin not loaded).
+local function dap_view_is_open()
+	local ok_state, state = pcall(require, "dap-view.state")
+	local ok_util, util = pcall(require, "dap-view.util")
+	return ok_state and ok_util and util.is_win_valid(state.winnr)
+end
+
+local DAP_VIEW_SECTIONS = { "scopes", "watches", "repl", "console", "sessions" }
+
+---1-5 switch dap-view sections only while a session is active (no clash with counts offline).
+local function setup_dap_view_section_keys()
+	local dap = require("dap")
+	local mapped = false
+
+	local function enable()
+		if mapped then
+			return
+		end
+		mapped = true
+		for i, section in ipairs(DAP_VIEW_SECTIONS) do
+			vim.keymap.set("n", tostring(i), function()
+				local view = require("dap-view")
+				if not dap_view_is_open() then
+					view.open()
+				end
+				view.show_view(section)
+			end, { desc = "DAP view: " .. section, silent = true })
+		end
+	end
+
+	local function disable()
+		if not mapped then
+			return
+		end
+		mapped = false
+		for i = 1, #DAP_VIEW_SECTIONS do
+			pcall(vim.keymap.del, "n", tostring(i))
+		end
+	end
+
+	dap.listeners.after.event_initialized["mico_dap_view_keys"] = enable
+	dap.listeners.after.event_stopped["mico_dap_view_keys"] = enable
+	dap.listeners.after.event_terminated["mico_dap_view_keys"] = function()
+		if not dap.session() then
+			disable()
+		end
+	end
+	dap.listeners.after.event_exited["mico_dap_view_keys"] = function()
+		if not dap.session() then
+			disable()
+		end
+	end
+	dap.listeners.after.disconnect["mico_dap_view_keys"] = function()
+		if not dap.session() then
+			disable()
+		end
+	end
+end
+
 return {
 	{
 		"mfussenegger/nvim-dap",
@@ -78,6 +137,7 @@ return {
 		config = function()
 			local dap = require("dap")
 			require("nvim-dap-virtual-text").setup()
+			setup_dap_view_section_keys()
 
 			vim.fn.sign_define("DapBreakpoint", {
 				text = icons.DapBreakpoint,
@@ -129,17 +189,12 @@ return {
 
 			-- JS/TS via mason js-debug-adapter (vscode-js-debug).
 			--
-			-- tsx is almost never on PATH — only node_modules/.bin/tsx. Bare
-			-- runtimeExecutable="tsx" makes the adapter spawn fail → "Debug adapter disconnected".
-			--
-			-- console=integratedTerminal creates a term_buf; dap-view's dap-defaults
-			-- sets terminal_win_cmd to a hidden buffer, and the Console section shows it
-			-- (no extra split when terminal.hide = true and console is in winbar.sections).
+			-- Critical: launch with `node --import tsx` + `program`, NOT runtimeExecutable=tsx.
+			-- The tsx CLI often runs user code in a child process that never gets inspect-brk,
+			-- so stopOnEntry/breakpoints are ignored while the console still prints output.
 			local js_debug = vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
 			local js_debug_bin = vim.fn.stdpath("data") .. "/mason/bin/js-debug-adapter"
 			if vim.uv.fs_stat(js_debug) or vim.fn.filereadable(js_debug) == 1 then
-				-- dapDebugServer defaults to host "localhost" (often ::1). We must bind and
-				-- connect on the same address or nvim-dap reports "Couldn't connect to 127.0.0.1:PORT".
 				local function free_port()
 					local uv = vim.uv or vim.loop
 					local server = assert(uv.new_tcp())
@@ -182,23 +237,7 @@ return {
 					"**/node_modules/**",
 				}
 
-				-- Shared maps for attach / plain node. Do NOT set outFiles on tsx launches:
-				-- tsx runs .ts in-process; pointing the adapter at emitted .js breaks BP binding
-				-- and leaves you running with no pause → "No eligible scopes".
-				local node_maps = {
-					sourceMaps = true,
-					resolveSourceMapLocations = {
-						"${workspaceFolder}/**",
-						"!**/node_modules/**",
-					},
-					outFiles = {
-						"${workspaceFolder}/**/*.(m|c|)js",
-						"!**/node_modules/**",
-					},
-					skipFiles = skip_files,
-				}
-
-				local tsx_maps = {
+				local ts_maps = {
 					sourceMaps = true,
 					resolveSourceMapLocations = {
 						"${workspaceFolder}/**",
@@ -207,58 +246,47 @@ return {
 					skipFiles = skip_files,
 				}
 
-				---Resolve project-local tsx; never rely on PATH.
-				local function local_tsx()
+				---Ensure project-local tsx exists (node resolves --import tsx from cwd).
+				local function assert_local_tsx()
 					local root = vim.fn.getcwd()
-					local candidates = {
-						root .. "/node_modules/.bin/tsx",
-						root .. "/node_modules/tsx/dist/cli.mjs",
-					}
-					for _, path in ipairs(candidates) do
-						if vim.fn.filereadable(path) == 1 or vim.fn.executable(path) == 1 then
-							return path
-						end
-					end
-					return nil
-				end
-
-				-- Enrich launch configs that ask for local tsx before the adapter runs.
-				dap.listeners.on_config = dap.listeners.on_config or {}
-				dap.listeners.on_config["mico_tsx_resolve"] = function(config)
-					if not config.mico_use_local_tsx then
-						return config
-					end
-					local tsx = local_tsx()
-					if not tsx then
+					local pkg = root .. "/node_modules/tsx/package.json"
+					if vim.fn.filereadable(pkg) == 0 then
 						vim.notify(
-							"tsx not found under "
-								.. vim.fn.getcwd()
+							"tsx package not found under "
+								.. root
 								.. "/node_modules — run npm i and open nvim from the project root",
 							vim.log.levels.ERROR
 						)
+						return false
+					end
+					return true
+				end
+
+				dap.listeners.on_config = dap.listeners.on_config or {}
+				dap.listeners.on_config["mico_tsx_check"] = function(config)
+					if config.mico_require_tsx and not assert_local_tsx() then
 						return config
 					end
 					config = vim.deepcopy(config)
-					config.runtimeExecutable = tsx
-					config.mico_use_local_tsx = nil
+					config.mico_require_tsx = nil
 					return config
 				end
 
-				-- Scopes only exist while paused. Open the panel on stop so it's obvious.
 				dap.listeners.after.event_stopped["mico_open_dap_view"] = function()
 					local ok, view = pcall(require, "dap-view")
 					if ok then
 						view.open()
+						view.show_view("scopes")
 					end
 				end
 
-				local function launch(cfg, maps)
+				local function launch(cfg)
 					return vim.tbl_deep_extend("force", {
 						type = "pwa-node",
 						request = "launch",
 						cwd = "${workspaceFolder}",
 						console = "integratedTerminal",
-					}, maps or node_maps, cfg)
+					}, ts_maps, cfg)
 				end
 
 				local function attach(cfg)
@@ -266,64 +294,60 @@ return {
 						type = "pwa-node",
 						request = "attach",
 						cwd = "${workspaceFolder}",
-					}, node_maps, cfg)
+					}, ts_maps, cfg)
 				end
 
+				-- node --import tsx <program>: one process, js-debug can inject inspect-brk.
 				local function launch_tsx(cfg)
-					cfg.mico_use_local_tsx = true
-					cfg.runtimeExecutable = "tsx"
-					-- Direct tsx: stay on one session (child attach confuses scopes).
-					cfg.autoAttachChildProcesses = false
-					return launch(cfg, tsx_maps)
+					return launch(vim.tbl_deep_extend("force", {
+						mico_require_tsx = true,
+						runtimeExecutable = "node",
+						runtimeArgs = { "--import", "tsx" },
+						autoAttachChildProcesses = false,
+					}, cfg))
 				end
 
 				local js_ts = {
 					launch_tsx({
 						name = "tsx: src/main.ts",
-						args = { "${workspaceFolder}/src/main.ts" },
-						-- Pause immediately so Scopes has a frame (continue with <leader>dc).
+						program = "${workspaceFolder}/src/main.ts",
 						stopOnEntry = true,
 					}),
 					launch_tsx({
 						name = "tsx: src/main.ts (no stop on entry)",
-						args = { "${workspaceFolder}/src/main.ts" },
+						program = "${workspaceFolder}/src/main.ts",
 						stopOnEntry = false,
 					}),
 					launch_tsx({
 						name = "tsx: current file",
-						args = { "${file}" },
+						program = "${file}",
 						stopOnEntry = true,
 					}),
-					launch_tsx({
-						name = "tsx watch: src/main.ts",
-						args = { "watch", "${workspaceFolder}/src/main.ts" },
-						restart = true,
-						autoAttachChildProcesses = true,
-						stopOnEntry = false,
-					}),
+					-- npm / watch still need child attach
 					launch({
 						name = "npm: run dev",
 						runtimeExecutable = "npm",
 						runtimeArgs = { "run", "dev" },
 						restart = true,
 						autoAttachChildProcesses = true,
-					}, node_maps),
+					}),
 					launch({
 						name = "npm: start",
 						runtimeExecutable = "npm",
 						runtimeArgs = { "start" },
 						autoAttachChildProcesses = true,
-					}, node_maps),
+					}),
 					launch({
 						name = "npm: test",
 						runtimeExecutable = "npm",
 						runtimeArgs = { "test" },
 						autoAttachChildProcesses = true,
-					}, node_maps),
+					}),
 					launch({
 						name = "node: current file (JS only)",
 						program = "${file}",
-					}, node_maps),
+						runtimeExecutable = "node",
+					}),
 					attach({
 						name = "Attach (pick process)",
 						processId = require("dap.utils").pick_process,
@@ -383,7 +407,6 @@ return {
 				},
 			},
 		},
-		-- Must shim before require("dap-view"): listeners.lua runs at import time.
 		config = function(_, opts)
 			for name in pairs(package.loaded) do
 				if name == "dap-view" or vim.startswith(name, "dap-view.") then
