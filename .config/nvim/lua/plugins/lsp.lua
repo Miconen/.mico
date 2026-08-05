@@ -212,8 +212,10 @@ return {
 			}
 
 			-- ── Mason setup ────────────────────────────────────────────────────────
-			require("mason").setup()
-
+			-- mason.setup() is NOT called here. mason.nvim is declared as a dependency
+			-- with its own `opts`, so lazy has already set it up before this config
+			-- function runs. Calling setup() again appends every configured registry to
+			-- Registry.sources a second time.
 			local ensure_installed = vim.tbl_keys(servers)
 			vim.list_extend(ensure_installed, {
 				-- Formatters
