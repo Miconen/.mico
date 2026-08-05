@@ -18,6 +18,8 @@ Snacks.toggle
 	:map("<leader>uc")
 Snacks.toggle.diagnostics():map("<leader>ud")
 Snacks.toggle.line_number():map("<leader>ul")
+-- Unaffected by the treesitter rewrite: this toggle drives Neovim's own
+-- vim.treesitter.start/stop and vim.b.ts_highlight, not nvim-treesitter's API.
 Snacks.toggle.treesitter():map("<leader>uT")
 Snacks.toggle.inlay_hints():map("<leader>uh")
 Snacks.toggle.dim():map("<leader>uz")
@@ -37,5 +39,7 @@ map("n", "<leader>pL", function()
 end, { desc = "Lazy update" })
 map("n", "<leader>pm", "<cmd>Mason<cr>", { desc = "Mason" })
 map("n", "<leader>pM", "<cmd>MasonUpdate<cr>", { desc = "Mason update" })
-map("n", "<leader>pt", "<cmd>TSInstallInfo<cr>", { desc = "Treesitter info" })
+-- The rewrite only registers TSInstall, TSInstallFromGrammar, TSLog, TSUninstall
+-- and TSUpdate. TSInstallInfo is gone, so this shows the log instead.
+map("n", "<leader>pt", "<cmd>TSLog<cr>", { desc = "Treesitter log" })
 map("n", "<leader>pT", "<cmd>TSUpdate<cr>", { desc = "Treesitter update" })

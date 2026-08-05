@@ -55,6 +55,11 @@
       # clipboard tool at all - wl-clipboard was only declared for WSL.
       wl-clipboard
 
+      # nvim-treesitter (the main-branch rewrite) compiles parsers itself and
+      # requires the tree-sitter CLI >= 0.26.1, explicitly NOT the npm build.
+      # curl and tar are here too; the C compiler comes from pacman gcc.
+      tree-sitter
+
       # git / dev
       gh
       lazygit
