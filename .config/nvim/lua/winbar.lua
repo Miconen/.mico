@@ -12,6 +12,12 @@ local SKIP_FT = {
 	checkhealth = true,
 	man = true,
 	qf = true,
+	-- nvim-dap-view owns these winbars (section tabs / controls)
+	["dap-view"] = true,
+	["dap-view-term"] = true,
+	["dap-view-hover"] = true,
+	["dap-view-help"] = true,
+	["dap-repl"] = true,
 }
 
 local FOLDER = "󰉋 "
@@ -127,9 +133,15 @@ function M.setup()
 		group = group,
 		callback = function()
 			-- Skip floating windows (pickers, hovers, etc.)
-			if vim.api.nvim_win_get_config(0).relative == "" then
-				vim.wo.winbar = build()
+			if vim.api.nvim_win_get_config(0).relative ~= "" then
+				return
 			end
+			-- Do not assign winbar at all for skipped fts — empty string would
+			-- wipe nvim-dap-view's section tabs on focus.
+			if SKIP_FT[vim.bo.filetype] or vim.bo.buftype ~= "" then
+				return
+			end
+			vim.wo.winbar = build()
 		end,
 	})
 end

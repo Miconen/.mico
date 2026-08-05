@@ -180,6 +180,25 @@ return {
 				desc = "Toggle DAP view",
 			},
 		},
+		opts = {
+			winbar = {
+				show = true,
+				show_keymap_hints = true,
+				sections = { "scopes", "repl" },
+				default_section = "scopes",
+			},
+			windows = {
+				-- Vertical sidebar on the right (~1/3 of the editor)
+				position = "right",
+				size = 0.33,
+				terminal = {
+					-- Keep the debug adapter console out of the way
+					hide = true,
+					position = "below",
+					size = 0.25,
+				},
+			},
+		},
 		-- Must shim before require("dap-view"): listeners.lua runs at import time.
 		config = function(_, opts)
 			-- Clear a half-failed require from a previous error in this session.
@@ -189,7 +208,7 @@ return {
 				end
 			end
 			ensure_dap_view_compat()
-			require("dap-view").setup(opts or {})
+			require("dap-view").setup(opts)
 		end,
 	},
 }
