@@ -1,14 +1,13 @@
 -- keymaps/search.lua
 local wk = require("which-key")
 local map = vim.keymap.set
+local icons = require("keymaps.icons")
 
--- ── Group label ──────────────────────────────────────────────────────────────
 wk.add({
-	{ "<leader>s", group = " Search" },
-	{ "<leader>sn", group = " Neovim configuration" },
+	{ "<leader>s", group = icons.Search .. " Search" },
+	{ "<leader>sn", group = "Neovim configuration" },
 })
 
--- ── Snacks picker ────────────────────────────────────────────────────────────
 map("n", "<leader>sf", function()
 	Snacks.picker.files()
 end, { desc = "Files" })
@@ -49,9 +48,6 @@ map("n", "<leader>s<CR>", function()
 	Snacks.picker.resume()
 end, { desc = "Resume last search" })
 
--- todo-comments registers a Snacks picker source when Snacks is present, so this
--- goes through the picker you actually have. The old `TodoTelescope` command only
--- exists when telescope is installed, which it is not - that bind was dead.
 map("n", "<leader>st", function()
 	Snacks.picker.todo_comments()
 end, { desc = "Todo comments" })
@@ -63,12 +59,10 @@ map("n", "<leader>sng", function()
 	Snacks.picker.grep({ cwd = vim.fn.stdpath("config") })
 end, { desc = "Grep neovim config" })
 
--- Fuzzy find in current buffer
 map("n", "<leader>/", function()
 	Snacks.picker.lines()
-end, { desc = " Fuzzy search buffer" })
+end, { desc = icons.Search .. " Fuzzy search buffer" })
 
--- Fuzzy find across open buffers
 map("n", "<leader>s/", function()
 	Snacks.picker.grep({ buf = true })
 end, { desc = "Grep open buffers" })

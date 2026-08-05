@@ -1,21 +1,6 @@
 -- plugins/ui.lua
 
 return {
-	-- Colorscheme
-	-- {
-	-- 	"tiagovla/tokyodark.nvim",
-	-- 	lazy = false,
-	-- 	priority = 1000,
-	-- 	opts = {
-	-- 		transparent_background = false,
-	-- 		gamma = 1.00,
-	-- 	},
-	-- 	config = function(_, opts)
-	-- 		require("tokyodark").setup(opts)
-	-- 		vim.cmd.colorscheme("tokyodark")
-	-- 	end,
-	-- },
-
 	{
 		"scottmckendry/cyberdream.nvim",
 		lazy = false,
@@ -29,7 +14,6 @@ return {
 		end,
 	},
 
-	-- Which-key: keybind hints
 	{
 		"folke/which-key.nvim",
 		event = "VeryLazy",
@@ -46,12 +30,11 @@ return {
 				align = "left",
 			},
 			icons = {
-				rules = false, -- use nerd font icons from mappings
+				rules = false,
 			},
 		},
 	},
 
-	-- Snacks: swiss-army utilities
 	{
 		"folke/snacks.nvim",
 		priority = 1000,
@@ -60,28 +43,25 @@ return {
 			bigfile = { enabled = true },
 			notifier = { enabled = true, timeout = 3000 },
 			quickfile = { enabled = true },
-			words = { enabled = true },
 			toggle = { which_key = true },
 			rename = { enabled = true },
 			gitbrowse = { enabled = true },
 			lazygit = { enabled = true },
-			terminal = { enabled = true },
 			scratch = { enabled = true },
 			dim = { enabled = true },
-			zen = { enabled = true },
-			-- Dashboard disabled intentionally
-			dashboard = { enabled = false },
-			-- Statuscolumn: nicer fold/sign/number column
 			statuscolumn = { enabled = true },
-			-- Picker replaces telescope
 			picker = {
 				enabled = true,
-				ui_select = true, -- replace vim.ui.select
+				ui_select = true,
 			},
+			-- Unused in this config (no keymaps / no call sites)
+			words = { enabled = false },
+			zen = { enabled = false },
+			terminal = { enabled = false },
+			dashboard = { enabled = false },
 		},
 	},
 
-	-- Indent guides
 	{
 		"lukas-reineke/indent-blankline.nvim",
 		main = "ibl",
@@ -92,7 +72,6 @@ return {
 		},
 	},
 
-	-- Todo comments
 	{
 		"folke/todo-comments.nvim",
 		event = "VimEnter",

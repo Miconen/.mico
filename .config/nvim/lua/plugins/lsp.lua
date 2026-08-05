@@ -1,17 +1,12 @@
 -- plugins/lsp.lua
 
 -- selene: allow(unused_variable, shadowing)
--- Both are false positives here, and deleting the local below WILL break every
--- LSP keymap. A Lua local is not in scope until after its own statement, so the
--- `map(...)` call inside the inner `local map = function(...)` further down
--- resolves to THIS binding, not to itself. Verified with luajit:
---   local m = function(a) return "OUTER("..a..")" end
---   local m = function(a) return m(a).."+inner" end
---   print(m("x"))  --> OUTER(x)+inner
+-- Outer `map` is closed over by the inner LspAttach wrapper (Lua locals are not
+-- in scope until after their own statement — the inner call hits this binding).
 local map = vim.keymap.set
+local icons = require("keymaps.icons")
 
 return {
-	-- Lua LSP awareness of Neovim runtime/APIs
 	{
 		"folke/lazydev.nvim",
 		ft = "lua",
@@ -24,7 +19,6 @@ return {
 	},
 	{ "Bilal2453/luvit-meta", lazy = true },
 
-	-- Mason: install/manage LSP servers, formatters, linters
 	{
 		"mason-org/mason.nvim",
 		cmd = {
@@ -46,13 +40,9 @@ return {
 		},
 	},
 
-	-- Mason <-> lspconfig bridge
 	{ "mason-org/mason-lspconfig.nvim", lazy = true },
-
-	-- Ensures formatters/linters are installed via mason
 	{ "WhoIsSethDaniel/mason-tool-installer.nvim", lazy = true },
 
-	-- LSP configuration
 	{
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufNewFile" },
@@ -64,9 +54,13 @@ return {
 			"saghen/blink.cmp",
 		},
 		config = function()
-			-- ── Diagnostic signs & config ──────────────────────────────────────────
 			if vim.g.have_nerd_font then
-				local signs = { ERROR = "󰊠", WARN = "󰊠", INFO = "", HINT = "" }
+				local signs = {
+					ERROR = icons.DiagnosticError,
+					WARN = icons.DiagnosticWarn,
+					INFO = icons.DiagnosticInfo,
+					HINT = icons.DiagnosticHint,
+				}
 				local diagnostic_signs = {}
 				for type, icon in pairs(signs) do
 					diagnostic_signs[vim.diagnostic.severity[type]] = icon
@@ -76,9 +70,7 @@ return {
 					virtual_text = true,
 					underline = true,
 					severity_sort = true,
-					-- false on purpose: true recomputes and redraws diagnostics on every
-					-- keystroke, which is the single most expensive default in this config
-					-- on modest hardware. Diagnostics still refresh on InsertLeave.
+					-- false: avoid redrawing diagnostics on every keystroke (costly on modest CPUs).
 					update_in_insert = false,
 					float = {
 						focused = false,
@@ -91,19 +83,16 @@ return {
 				})
 			end
 
-			-- ── LspAttach: buffer-local keymaps ────────────────────────────────────
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("lsp_attach_keymaps", { clear = true }),
 				callback = function(event)
 					local buf = event.buf
 					-- selene: allow(shadowing)
-					-- Intentional: this wraps the outer `map` (vim.keymap.set) to add the
-					-- buffer and an "LSP: " description prefix. See the note at the top.
+					-- Wraps outer map with buffer + "LSP: " desc prefix.
 					local map = function(keys, func, desc, mode)
 						map(mode or "n", keys, func, { buffer = buf, desc = "LSP: " .. desc })
 					end
 
-					-- Navigation
 					map("gd", function()
 						Snacks.picker.lsp_definitions()
 					end, "Goto definition")
@@ -114,9 +103,7 @@ return {
 						Snacks.picker.lsp_implementations()
 					end, "Goto implementation")
 					map("gD", vim.lsp.buf.declaration, "Goto declaration")
-					-- goto_next/goto_prev are vim.deprecate(..., "0.13"), i.e. removed in the
-					-- next release. jump() is the replacement; float = true reproduces what
-					-- goto_next did by default.
+					-- vim.diagnostic.jump replaces deprecated goto_next/goto_prev (removed in 0.13).
 					map("ge", function()
 						vim.diagnostic.jump({ count = 1, float = true })
 					end, "Next diagnostic")
@@ -124,13 +111,10 @@ return {
 						vim.diagnostic.jump({ count = -1, float = true })
 					end, "Previous diagnostic")
 
-					-- LSP actions (<leader>l group label set in keymaps/lsp.lua)
 					map("<leader>lD", function()
 						Snacks.picker.lsp_type_definitions()
 					end, "Type definition")
-					-- lsp_symbols, not lsp_document_symbols. The latter has never been a
-					-- registered Snacks picker source, so this bind errored rather than
-					-- opening anything.
+					-- Snacks source is lsp_symbols (not lsp_document_symbols).
 					map("<leader>ls", function()
 						Snacks.picker.lsp_symbols()
 					end, "Document symbols")
@@ -142,11 +126,8 @@ return {
 					map("<leader>ll", vim.lsp.codelens.run, "Run codelens")
 					map("K", vim.lsp.buf.hover, "Hover docs")
 
-					-- Document highlight on cursor hold
 					local client = vim.lsp.get_client_by_id(event.data.client_id)
-					-- client:supports_method, not client.supports_method. The dot form still
-					-- works via a compatibility shim in 0.12, but that shim calls
-					-- vim.deprecate(..., "0.13") and goes away in the next release.
+					-- Method form client:supports_method; dot form is deprecated for 0.13.
 					if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
 						local hl_group = vim.api.nvim_create_augroup("lsp_highlight_" .. buf, { clear = true })
 						vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
@@ -171,16 +152,13 @@ return {
 				end,
 			})
 
-			-- ── Server capabilities (shared, extended by blink.cmp) ───────────────
 			local capabilities = vim.tbl_deep_extend(
 				"force",
 				vim.lsp.protocol.make_client_capabilities(),
 				require("blink.cmp").get_lsp_capabilities()
 			)
 
-			-- ── Server definitions ─────────────────────────────────────────────────
 			local servers = {
-				-- Go
 				gopls = {
 					settings = {
 						gopls = {
@@ -190,11 +168,8 @@ return {
 						},
 					},
 				},
-				-- TypeScript / JavaScript
 				ts_ls = {},
-				-- Python
 				pyright = {},
-				-- Lua
 				lua_ls = {
 					settings = {
 						Lua = {
@@ -204,55 +179,39 @@ return {
 						},
 					},
 				},
-				-- Web
 				html = {},
 				cssls = {},
 				jsonls = {},
 				yamlls = {},
-				-- Misc
 				bashls = {},
 				dockerls = {},
+				nil_ls = {},
 			}
 
-			-- ── Mason setup ────────────────────────────────────────────────────────
-			-- mason.setup() is NOT called here. mason.nvim is declared as a dependency
-			-- with its own `opts`, so lazy has already set it up before this config
-			-- function runs. Calling setup() again appends every configured registry to
-			-- Registry.sources a second time.
+			-- Do not call mason.setup() here — lazy already did via opts (double setup duplicates registries).
 			local ensure_installed = vim.tbl_keys(servers)
 			vim.list_extend(ensure_installed, {
-				-- Formatters
 				"stylua",
 				"prettierd",
 				"black",
 				"isort",
 				"gofumpt",
 				"goimports",
-				-- Linters
+				"nixfmt",
 				"markdownlint",
 				"biome",
-				-- Debuggers
 				"delve",
 				"debugpy",
 				"js-debug-adapter",
 			})
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
-			-- mason-lspconfig 2.x. Its `handlers` table is gone; it can now enable
-			-- servers itself via automatic_enable, but that keys off whatever happens to
-			-- be installed in Mason. Turning it off keeps the `servers` table above as
-			-- the single source of truth. It is still set up because mason-tool-installer
-			-- relies on it to translate lspconfig names (lua_ls) into Mason package names
-			-- (lua-language-server).
+			-- automatic_enable off: servers table is the single source of truth.
+			-- mason-lspconfig still needed so mason-tool-installer can map lspconfig ↔ package names.
 			require("mason-lspconfig").setup({ automatic_enable = false })
 
-			-- Shared capabilities for every server. "*" is a real wildcard config in
-			-- vim.lsp, not a server name.
 			vim.lsp.config("*", { capabilities = capabilities })
 
-			-- Per-server overrides. The base config for each of these ships with
-			-- nvim-lspconfig as lsp/<name>.lua and is picked up off the runtimepath by
-			-- Neovim itself, so only the deltas belong here.
 			for name, cfg in pairs(servers) do
 				if next(cfg) ~= nil then
 					vim.lsp.config(name, cfg)
@@ -263,7 +222,6 @@ return {
 		end,
 	},
 
-	-- Formatter
 	{
 		"stevearc/conform.nvim",
 		event = { "BufWritePre" },
@@ -290,19 +248,20 @@ return {
 			formatters_by_ft = {
 				lua = { "stylua" },
 				python = { "isort", "black" },
-				javascript = { "prettierd", stop_after_first = true },
-				typescript = { "prettierd", stop_after_first = true },
-				typescriptreact = { "prettierd", stop_after_first = true },
-				javascriptreact = { "prettierd", stop_after_first = true },
-				json = { "prettierd" },
+				javascript = { "biome" },
+				typescript = { "biome" },
+				typescriptreact = { "biome" },
+				javascriptreact = { "biome" },
+				json = { "biome" },
+				jsonc = { "biome" },
 				yaml = { "prettierd" },
 				markdown = { "prettierd" },
 				go = { "goimports", "gofumpt" },
+				nix = { "nixfmt" },
 			},
 		},
 	},
 
-	-- Linter
 	{
 		"mfussenegger/nvim-lint",
 		event = { "BufReadPre", "BufNewFile" },
@@ -327,17 +286,13 @@ return {
 		end,
 	},
 
-	-- blink.cmp: completion
 	{
 		"saghen/blink.cmp",
 		event = { "InsertEnter", "CmdlineEnter" },
-		-- Pinned to the 1.x tag series rather than the main branch: tagged releases
-		-- ship prebuilt fuzzy-matcher binaries, whereas tracking main means building
-		-- the Rust matcher locally.
+		-- 1.x tags ship prebuilt fuzzy binaries; main would require a local Rust build.
 		version = "1.*",
 		dependencies = {
 			"rafamadriz/friendly-snippets",
-			-- Autopairs integration
 			"windwp/nvim-autopairs",
 		},
 		opts = {
@@ -364,7 +319,7 @@ return {
 					lazydev = {
 						name = "LazyDev",
 						module = "lazydev.integrations.blink",
-						score_offset = 100, -- prioritise lazydev over lsp for lua
+						score_offset = 100,
 					},
 					dadbod = {
 						name = "Dadbod",
@@ -374,7 +329,6 @@ return {
 			},
 			completion = {
 				accept = {
-					-- Integrate with autopairs
 					create_undo_point = true,
 					auto_brackets = {
 						enabled = true,

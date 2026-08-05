@@ -1,10 +1,9 @@
 -- keymaps/lsp.lua
--- Group label only — individual LSP binds are set on LspAttach
--- in plugins/lsp.lua so they are buffer-local and only active
--- when an LSP client is attached.
+-- Group label only — buffer-local LSP binds live in plugins/lsp.lua (LspAttach).
 
 local wk = require("which-key")
+local icons = require("keymaps.icons")
 
 wk.add({
-	{ "<leader>l", group = " LSP" },
+	{ "<leader>l", group = icons.ActiveLSP .. " LSP" },
 })

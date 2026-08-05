@@ -1,5 +1,6 @@
 -- statusline.lua
 local M = {}
+local icons = require("keymaps.icons")
 
 local SKIP_FILETYPES = {
 	[""] = true,
@@ -70,10 +71,10 @@ local function get_diagnostics()
 	local severity = vim.diagnostic.severity
 
 	local items = {
-		{ severity.ERROR, "DiagnosticError", " " },
-		{ severity.WARN, "DiagnosticWarn", " " },
-		{ severity.INFO, "DiagnosticInfo", "󰋼 " },
-		{ severity.HINT, "DiagnosticHint", "󰌵 " },
+		{ severity.ERROR, "DiagnosticError", icons.DiagnosticError .. " " },
+		{ severity.WARN, "DiagnosticWarn", icons.DiagnosticWarn .. " " },
+		{ severity.INFO, "DiagnosticInfo", icons.DiagnosticInfo .. " " },
+		{ severity.HINT, "DiagnosticHint", icons.DiagnosticHint .. " " },
 	}
 
 	local parts = {}
@@ -88,10 +89,7 @@ local function get_diagnostics()
 	return table.concat(parts, "  ")
 end
 
--- Both lookups below are relatively expensive and were previously running on every
--- statusline redraw, i.e. roughly every cursor movement. They only change when a
--- client attaches or detaches, or when the buffer/filetype changes, so the result
--- is computed in an autocmd (see M.setup) and cached per buffer.
+-- Cached per buffer: only changes on attach/detach/ft, not every cursor move.
 local function compute_lsp_and_formatter_status()
 	if SKIP_FILETYPES[vim.bo.filetype] then
 		return ""
@@ -100,12 +98,12 @@ local function compute_lsp_and_formatter_status()
 	local parts = {}
 
 	if #vim.lsp.get_clients({ bufnr = 0 }) == 0 then
-		table.insert(parts, with_hl("DiagnosticError", "󰒓 No LSP"))
+		table.insert(parts, with_hl("DiagnosticError", icons.LSPLoading .. " No LSP"))
 	end
 
 	local ok, conform = pcall(require, "conform")
 	if ok and #conform.list_formatters(0) == 0 then
-		table.insert(parts, with_hl("DiagnosticWarn", "󰒓 No fmt"))
+		table.insert(parts, with_hl("DiagnosticWarn", icons.LSPLoading .. " No fmt"))
 	end
 
 	return table.concat(parts, "  ")
@@ -125,7 +123,7 @@ local function get_macro_status()
 		return ""
 	end
 
-	return with_hl("SLMacro", "REC @" .. register)
+	return with_hl("SLMacro", icons.MacroRecording .. " @" .. register)
 end
 
 local function get_git_branch()
@@ -135,7 +133,7 @@ local function get_git_branch()
 		return ""
 	end
 
-	return with_hl("MiniStatuslineDevinfo", " " .. summary.head_name)
+	return with_hl("MiniStatuslineDevinfo", icons.GitBranch .. " " .. summary.head_name)
 end
 
 local function get_filename()
@@ -146,7 +144,7 @@ local function get_filename()
 	end
 
 	if vim.bo.modified then
-		filename = filename .. " ●"
+		filename = filename .. " " .. icons.FileModified
 	end
 
 	return filename
@@ -182,7 +180,7 @@ function M.setup()
 				local macro_status = get_macro_status()
 				local git_branch = get_git_branch()
 
-				local cursor = with_hl("MiniStatuslineDevinfo", "󰈙 %l:%c %p%%")
+				local cursor = with_hl("MiniStatuslineDevinfo", icons.DefaultFile .. " %l:%c %p%%")
 
 				local left = join_nonempty({
 					with_hl(mode_hl, " "),

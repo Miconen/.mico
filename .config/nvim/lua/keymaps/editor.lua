@@ -1,11 +1,11 @@
 -- keymaps/editor.lua
 local wk = require("which-key")
 local map = vim.keymap.set
+local icons = require("keymaps.icons")
 
--- ── Group labels ────────────────────────────────────────────────────────────
 wk.add({
-	{ "<leader>n", group = "󰅌 Notes" },
-	{ "<leader>w", group = " Windows" },
+	{ "<leader>n", group = icons.Notes .. " Notes" },
+	{ "<leader>w", group = icons.Window .. " Windows" },
 })
 
 -- ── Window navigation ────────────────────────────────────────────────────────
@@ -14,13 +14,7 @@ map("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
 map("n", "<C-j>", "<C-w>j", { desc = "Move to lower window" })
 map("n", "<C-k>", "<C-w>k", { desc = "Move to upper window" })
 
--- ── Splits ───────────────────────────────────────────────────────────────────
--- Under <leader>w rather than the old `sp` / `vs`.
---
--- `sp` made `s` an ambiguous prefix, and `vs` did the same to `v`, so Neovim had
--- to wait out `timeoutlen` (350ms) on every press to see whether a second key
--- was coming. That delayed flash.nvim's `s` jump and entering visual mode with
--- `v` - two of the most-pressed keys there are.
+-- Splits under <leader>w so `s`/`v` stay free for flash / visual (no timeoutlen delay).
 map("n", "<leader>ws", "<cmd>split<cr>", { desc = "Horizontal split" })
 map("n", "<leader>wv", "<cmd>vsplit<cr>", { desc = "Vertical split" })
 map("n", "<leader>wc", "<cmd>close<cr>", { desc = "Close window" })
@@ -29,14 +23,11 @@ map("n", "<leader>w=", "<C-w>=", { desc = "Balance windows" })
 
 -- ── Misc editing ─────────────────────────────────────────────────────────────
 map("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
-map("n", "<leader>q", vim.diagnostic.setloclist, { desc = " Quickfix diagnostics" })
+map("n", "<leader>q", vim.diagnostic.setloclist, { desc = icons.Search .. " Quickfix diagnostics" })
 map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
--- Keep visual selection when indenting
 map("v", "<", "<gv", { desc = "Indent left" })
 map("v", ">", ">gv", { desc = "Indent right" })
-
--- Move lines up/down in visual mode
 map("v", "J", ":m '>+1<cr>gv=gv", { desc = "Move selection down" })
 map("v", "K", ":m '<-2<cr>gv=gv", { desc = "Move selection up" })
 
