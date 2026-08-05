@@ -1,0 +1,15 @@
+---
+# Minimal selene standard library for Neovim: Lua 5.1 (LuaJIT) plus the globals
+# that plugins inject.
+#
+# `any: true` means selene will not validate members, which is the pragmatic
+# choice - the alternative is hand-maintaining a description of the Neovim Lua
+# API and every plugin's surface.
+base: lua51
+globals:
+  vim:
+    any: true
+  # folke/snacks.nvim sets this global; without it selene reports 37 undefined
+  # variables in lua/plugins/lsp.lua alone.
+  Snacks:
+    any: true

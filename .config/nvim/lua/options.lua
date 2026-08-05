@@ -11,7 +11,7 @@ vim.opt.relativenumber = true
 vim.opt.signcolumn = "yes"
 vim.opt.showmode = false
 vim.opt.showtabline = 0
-vim.opt.laststatus = 3            -- global statusline
+vim.opt.laststatus = 3 -- global statusline
 vim.opt.fillchars = { eob = " " } -- hide ~ on empty lines
 vim.opt.colorcolumn = "80"
 
@@ -74,5 +74,5 @@ vim.opt.backspace:append({ "nostop" })
 vim.opt.viewoptions:remove("curdir")
 
 vim.schedule(function()
-  vim.opt.clipboard = "unnamedplus"
+	vim.opt.clipboard = "unnamedplus"
 end)

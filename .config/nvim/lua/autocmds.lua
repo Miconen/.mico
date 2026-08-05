@@ -74,7 +74,9 @@ autocmd("User", {
 	group = augroup("mini_files_lsp_rename", { clear = true }),
 	pattern = "MiniFilesActionRename",
 	callback = function(event)
-		local ok, snacks = pcall(require, "snacks")
+		-- Only the success flag is wanted: the call below uses the global `Snacks`,
+		-- so binding the module result would leave it unused.
+		local ok = pcall(require, "snacks")
 		if ok then
 			Snacks.rename.on_rename_file(event.data.from, event.data.to)
 		end

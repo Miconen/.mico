@@ -1,4 +1,13 @@
 -- plugins/lsp.lua
+
+-- selene: allow(unused_variable, shadowing)
+-- Both are false positives here, and deleting the local below WILL break every
+-- LSP keymap. A Lua local is not in scope until after its own statement, so the
+-- `map(...)` call inside the inner `local map = function(...)` further down
+-- resolves to THIS binding, not to itself. Verified with luajit:
+--   local m = function(a) return "OUTER("..a..")" end
+--   local m = function(a) return m(a).."+inner" end
+--   print(m("x"))  --> OUTER(x)+inner
 local map = vim.keymap.set
 
 return {
@@ -84,6 +93,9 @@ return {
 				group = vim.api.nvim_create_augroup("lsp_attach_keymaps", { clear = true }),
 				callback = function(event)
 					local buf = event.buf
+					-- selene: allow(shadowing)
+					-- Intentional: this wraps the outer `map` (vim.keymap.set) to add the
+					-- buffer and an "LSP: " description prefix. See the note at the top.
 					local map = function(keys, func, desc, mode)
 						map(mode or "n", keys, func, { buffer = buf, desc = "LSP: " .. desc })
 					end

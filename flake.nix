@@ -90,6 +90,10 @@
           # layout, because `zellij setup --check` is too permissive to catch
           # an empty new_tab_template.
           zellij
+
+          # neovim config lives in .config/nvim now
+          stylua
+          selene
         ];
       };
 
