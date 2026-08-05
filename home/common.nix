@@ -47,7 +47,7 @@
       duf
 
       # system
-      htop
+      btop
       fastfetch
 
       # Wayland clipboard. Needed for neovim's "+y on Hyprland and for anything

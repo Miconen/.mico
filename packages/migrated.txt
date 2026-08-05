@@ -11,6 +11,8 @@
 eza
 fastfetch
 git
+# Not migrated so much as replaced: nix provides btop instead. Kept here so
+# bootstrap still offers to remove a pacman-installed htop.
 htop
 keychain
 lazygit
