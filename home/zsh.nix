@@ -117,6 +117,12 @@
 
       # Zellij
       zf = "zellij action new-pane -f -- ";
+      # zellij reads config only when the session's server starts, and there is no
+      # reload action - `zellij action --help` offers only start-or-reload-plugin.
+      # session_serialization then makes `attach` resurrect the OLD layout, so
+      # editing config.kdl and running hms changes nothing at all. This kills the
+      # session and purges its saved state; open a new terminal for a fresh one.
+      zreload = "zellij delete-session --force main";
     };
 
     initContent = lib.mkMerge [

@@ -162,6 +162,19 @@ Bindings avoid `[` and `]` as primaries: on a Finnish ISO keyboard those are
 AltGr+8 / AltGr+9, so `Alt-[` is effectively unreachable. `,` and `.` are
 unshifted and adjacent. The bracket forms are kept as secondary bindings.
 
+**Config changes need the session recreated.** zellij reads its config only when
+the session's server starts, there is no reload action, and
+`session_serialization` makes `attach` resurrect the *old* layout - so editing
+`config.kdl` and running `hms` appears to do nothing:
+
+```bash
+zreload            # zellij delete-session --force main
+```
+
+That ends the current session (the terminal closes, since `.zshrc` exec'd into
+it). Open a new terminal for a fresh session on the new config. `hms` alone only
+re-execs zsh *inside* the existing session.
+
 **Tab names follow the project automatically.** A `chpwd` hook renames the tab to
 the git repo name, or the directory name outside a repo, or `~` at home. No
 keybind and nothing to run. It skips the subprocess when the name has not changed.
@@ -270,6 +283,15 @@ all of that:
 
 ```bash
 PATH=/usr/bin:$PATH makepkg -si
+```
+
+**`--check` reports a `*-debug` package.** A makepkg by-product: Arch defaults to
+`OPTIONS=(debug)`, and `makepkg -si` installs every artifact it built. bootstrap
+now builds and installs separately so only non-debug packages land, but an
+already-installed one has to go by hand:
+
+```bash
+sudo pacman -Rns paru-bin-debug
 ```
 
 **`pacman -Rns git` refuses.** Something depends on it.

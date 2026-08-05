@@ -210,6 +210,10 @@ if ((CHECK_ONLY)); then
     warn "installed explicitly but NOT declared (${#undeclared[@]}):"
     printf '      %s\n' "${undeclared[@]}"
     printf '      fix: add to packages/%s.txt, or pacman -Rns / -D --asdeps\n' "$HOST"
+    # -debug packages are makepkg by-products, never something you want declared.
+    if printf '%s\n' "${undeclared[@]}" | grep -q -- '-debug$'; then
+      printf '      note: *-debug entries are makepkg artifacts; remove them\n'
+    fi
   else
     ok "no undeclared explicit packages"
   fi
@@ -496,9 +500,25 @@ else
     #
     # Prepending rather than replacing, so anything else makepkg needs is still
     # reachable further down PATH.
+    #
+    # Build and install are separate steps on purpose. `makepkg -si` installs
+    # every artifact it produced, and Arch's default OPTIONS=(debug) also emits a
+    # <pkg>-debug package - which then shows up as undeclared drift forever.
+    # Installing only the non-debug artifacts avoids that without having to
+    # rewrite makepkg.conf.
     if git clone --depth 1 "https://aur.archlinux.org/${AUR_HELPER_PKG}.git" "$aur_tmp/$AUR_HELPER_PKG" \
-      && (cd "$aur_tmp/$AUR_HELPER_PKG" \
-        && PATH="/usr/bin:/usr/local/bin:$PATH" makepkg -si --noconfirm); then
+      && (
+        cd "$aur_tmp/$AUR_HELPER_PKG" || exit 1
+        PATH="/usr/bin:/usr/local/bin:$PATH" makepkg -s --noconfirm || exit 1
+        mapfile -t built < <(
+          find . -maxdepth 1 -name '*.pkg.tar.*' ! -name '*-debug-*' ! -name '*.sig' -print
+        )
+        ((${#built[@]} > 0)) || {
+          echo "makepkg produced no installable package" >&2
+          exit 1
+        }
+        sudo pacman -U --noconfirm -- "${built[@]}"
+      ); then
       ok "paru installed"
     else
       warn "could not build $AUR_HELPER_PKG - AUR packages will be skipped"
