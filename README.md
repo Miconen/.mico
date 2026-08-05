@@ -236,9 +236,36 @@ instance: a folder submitted listing only the phone came back normalised to
 `~/Sync` is created by Syncthing along with its `.stfolder` marker, also verified,
 so there is no activation step for it.
 
-On the phone, accept the two folder shares when they appear. `bootstrap.sh`
-reports on the service but deliberately does not `systemctl enable` it -
-home-manager owns the unit.
+### Pairing a phone or the desktop
+
+Get this laptop's ID **on the laptop**:
+
+```bash
+syncthing device-id
+```
+
+`http://127.0.0.1:8384` is the laptop's own web UI, opened in a browser on the
+laptop - not something you type into the phone. **Actions -> Show ID** there also
+shows a QR code, which beats typing 63 characters into a phone.
+
+Then in Syncthing-Fork, **Add Device**:
+
+| field | value | why |
+| --- | --- | --- |
+| ID | the laptop's device ID | or scan the QR |
+| Name | anything, e.g. `2B` | a local label only, never synced |
+| Addresses | leave `dynamic` | auto-discovery plus relay fallback. Hard-coding an address breaks when the LAN IP changes, and this laptop is behind port-restricted NAT anyway |
+| Folders | leave empty | the laptop already offers `documents` and `shared`; accept the prompt instead |
+| Introducer | **off** | it would let the laptop auto-add other devices to the phone, but `overrideDevices = true` means the laptop deletes anything auto-added, so pairing stays explicit |
+| Auto accept | **off** | otherwise folders are created at a path Syncthing picks for you |
+| Pause device | off | |
+| Untrusted device | **off** | that is the encrypted-relay mode, which was dropped; it needs a folder password and forces `receiveencrypted` |
+
+Accept the two folder shares on the phone when they appear. Do **not** accept
+anything on the laptop side - `overrideFolders` reverts it.
+
+`bootstrap.sh` reports on the service but deliberately does not
+`systemctl enable` it, since home-manager owns the unit.
 
 ### Things that will bite you
 
