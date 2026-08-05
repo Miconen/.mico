@@ -255,10 +255,17 @@ home-manager owns the unit.
   deletion propagates. `trashcan` versioning with a 30-day window makes a
   mis-click recoverable from `.stversions`, but Syncthing does not version
   deletions you originate locally. Real photo backup is a separate job.
-- **Memory.** This laptop has 7G with ~2G available and swap already in use, and
-  Syncthing keeps its index in RAM. `maxFolderConcurrency = 1` trades scan speed
-  for a lower peak. If `~/Documents` is large, watch
-  `systemctl --user status syncthing` for RSS.
+- **Memory.** Measured at 31M RSS with `documents` + `shared`, so the laptop's 7G
+  is a non-issue at this size. `maxFolderConcurrency = 1` is kept as precaution
+  for when the camera folder adds thousands of files, not because it is needed
+  now. Check with `systemctl --user status syncthing`.
+- **This connection is relay-dependent for remote peers.** The laptop logged
+  `Detected NAT type: Port restricted NAT` and `Detected NAT services (count=0)`,
+  meaning no UPnP/NAT-PMP port mapping is available, so it joined a public relay.
+  On the same LAN, local discovery gives direct transfers and this does not
+  matter. Phone-to-desktop over the internet will go through a relay, which is
+  fine for documents but slow for a photo library - forward TCP+UDP 22000 on the
+  router if that becomes annoying.
 - RuneLite is deliberately **not** synced here; its own profile sync handles it,
   which also keeps `credentials.properties` off the phone.
 
