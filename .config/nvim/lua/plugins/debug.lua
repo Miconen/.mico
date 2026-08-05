@@ -26,7 +26,7 @@ return {
 		},
 		keys = {
 			{
-				"<leader>db",
+				"<leader>d<leader>",
 				function()
 					require("dap").toggle_breakpoint()
 				end,
@@ -136,28 +136,39 @@ return {
 			-- sets terminal_win_cmd to a hidden buffer, and the Console section shows it
 			-- (no extra split when terminal.hide = true and console is in winbar.sections).
 			local js_debug = vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
+			local js_debug_bin = vim.fn.stdpath("data") .. "/mason/bin/js-debug-adapter"
 			if vim.uv.fs_stat(js_debug) or vim.fn.filereadable(js_debug) == 1 then
-				-- Pick a real free port. Some nvim-dap builds leave "${port}" unexpanded in the
-				-- connect address ("couldn't connect to 127.0.0.1:${port}").
+				-- dapDebugServer defaults to host "localhost" (often ::1). We must bind and
+				-- connect on the same address or nvim-dap reports "Couldn't connect to 127.0.0.1:PORT".
 				local function free_port()
 					local uv = vim.uv or vim.loop
-					local server = uv.new_tcp()
-					assert(server, "uv.new_tcp failed")
+					local server = assert(uv.new_tcp())
 					assert(server:bind("127.0.0.1", 0))
-					local sock = server:getsockname()
+					local sock = assert(server:getsockname())
 					server:close()
 					return sock.port
 				end
 
 				local function pwa_adapter(callback)
 					local port = free_port()
+					local cmd, args
+					if vim.fn.executable(js_debug_bin) == 1 then
+						cmd = js_debug_bin
+						args = { tostring(port), "127.0.0.1" }
+					else
+						cmd = "node"
+						args = { js_debug, tostring(port), "127.0.0.1" }
+					end
 					callback({
 						type = "server",
 						host = "127.0.0.1",
 						port = port,
 						executable = {
-							command = "node",
-							args = { js_debug, tostring(port) },
+							command = cmd,
+							args = args,
+						},
+						options = {
+							max_retries = 40,
 						},
 					})
 				end
