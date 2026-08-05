@@ -1,71 +1,21 @@
 -- plugins/debug.lua
 local icons = require("keymaps.icons")
 
-local function dap_keys()
-	return {
-		{
-			"<leader>db",
-			function()
-				require("dap").toggle_breakpoint()
-			end,
-			desc = "Toggle breakpoint",
-		},
-		{
-			"<leader>dB",
-			function()
-				require("dap").set_breakpoint(vim.fn.input("Condition: "))
-			end,
-			desc = "Conditional breakpoint",
-		},
-		{
-			"<leader>dc",
-			function()
-				require("dap").continue()
-			end,
-			desc = "Continue",
-		},
-		{
-			"<leader>dn",
-			function()
-				require("dap").step_over()
-			end,
-			desc = "Step over",
-		},
-		{
-			"<leader>di",
-			function()
-				require("dap").step_into()
-			end,
-			desc = "Step into",
-		},
-		{
-			"<leader>do",
-			function()
-				require("dap").step_out()
-			end,
-			desc = "Step out",
-		},
-		{
-			"<leader>dr",
-			function()
-				require("dap").repl.open()
-			end,
-			desc = "Open REPL",
-		},
-		{
-			"<leader>dt",
-			function()
-				require("dap").terminate()
-			end,
-			desc = "Terminate",
-		},
-	}
+---nvim-dap-view indexes dap.listeners.on_session at require-time (not setup).
+---Older nvim-dap only has before/after/on_config. Ensure the tables exist first.
+local function ensure_dap_view_compat()
+	local dap = require("dap")
+	local listeners = dap.listeners
+	if listeners.on_session == nil then
+		listeners.on_session = {}
+	end
+	if listeners.on_config == nil then
+		listeners.on_config = {}
+	end
+	return dap
 end
 
 return {
-	-- nvim-dap-view requires listeners.on_session (nvim-dap >= 2025-06).
-	-- It must NOT be a dependency of nvim-dap: its init requires listeners at
-	-- module load, which races if dap is still loading as the parent plugin.
 	{
 		"mfussenegger/nvim-dap",
 		dependencies = {
@@ -74,7 +24,64 @@ return {
 			"leoluz/nvim-dap-go",
 			"mfussenegger/nvim-dap-python",
 		},
-		keys = dap_keys(),
+		keys = {
+			{
+				"<leader>db",
+				function()
+					require("dap").toggle_breakpoint()
+				end,
+				desc = "Toggle breakpoint",
+			},
+			{
+				"<leader>dB",
+				function()
+					require("dap").set_breakpoint(vim.fn.input("Condition: "))
+				end,
+				desc = "Conditional breakpoint",
+			},
+			{
+				"<leader>dc",
+				function()
+					require("dap").continue()
+				end,
+				desc = "Continue",
+			},
+			{
+				"<leader>dn",
+				function()
+					require("dap").step_over()
+				end,
+				desc = "Step over",
+			},
+			{
+				"<leader>di",
+				function()
+					require("dap").step_into()
+				end,
+				desc = "Step into",
+			},
+			{
+				"<leader>do",
+				function()
+					require("dap").step_out()
+				end,
+				desc = "Step out",
+			},
+			{
+				"<leader>dr",
+				function()
+					require("dap").repl.open()
+				end,
+				desc = "Open REPL",
+			},
+			{
+				"<leader>dt",
+				function()
+					require("dap").terminate()
+				end,
+				desc = "Terminate",
+			},
+		},
 		config = function()
 			local dap = require("dap")
 			require("nvim-dap-virtual-text").setup()
@@ -110,7 +117,6 @@ return {
 				numhl = "DiagnosticWarn",
 			})
 
-			-- Go (TCP delve — more reliable under WSL than pipes)
 			require("dap-go").setup({
 				dap_configurations = {
 					{
@@ -128,7 +134,6 @@ return {
 
 			require("dap-python").setup(vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python")
 
-			-- JS/TS via mason js-debug-adapter (vscode-js-debug)
 			local js_debug = vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
 			if vim.uv.fs_stat(js_debug) or vim.fn.filereadable(js_debug) == 1 then
 				dap.adapters["pwa-node"] = {
@@ -175,6 +180,16 @@ return {
 				desc = "Toggle DAP view",
 			},
 		},
-		opts = {},
+		-- Must shim before require("dap-view"): listeners.lua runs at import time.
+		config = function(_, opts)
+			-- Clear a half-failed require from a previous error in this session.
+			for name in pairs(package.loaded) do
+				if name == "dap-view" or vim.startswith(name, "dap-view.") then
+					package.loaded[name] = nil
+				end
+			end
+			ensure_dap_view_compat()
+			require("dap-view").setup(opts or {})
+		end,
 	},
 }
