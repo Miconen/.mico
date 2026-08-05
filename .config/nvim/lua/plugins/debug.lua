@@ -176,7 +176,16 @@ return {
 				dap.adapters["pwa-node"] = pwa_adapter
 				dap.adapters["pwa-chrome"] = pwa_adapter
 
-				local source_maps = {
+				local skip_files = {
+					"<node_internals>/**",
+					"${workspaceFolder}/node_modules/**",
+					"**/node_modules/**",
+				}
+
+				-- Shared maps for attach / plain node. Do NOT set outFiles on tsx launches:
+				-- tsx runs .ts in-process; pointing the adapter at emitted .js breaks BP binding
+				-- and leaves you running with no pause → "No eligible scopes".
+				local node_maps = {
 					sourceMaps = true,
 					resolveSourceMapLocations = {
 						"${workspaceFolder}/**",
@@ -186,11 +195,16 @@ return {
 						"${workspaceFolder}/**/*.(m|c|)js",
 						"!**/node_modules/**",
 					},
-					skipFiles = {
-						"<node_internals>/**",
-						"${workspaceFolder}/node_modules/**",
-						"**/node_modules/**",
+					skipFiles = skip_files,
+				}
+
+				local tsx_maps = {
+					sourceMaps = true,
+					resolveSourceMapLocations = {
+						"${workspaceFolder}/**",
+						"!**/node_modules/**",
 					},
+					skipFiles = skip_files,
 				}
 
 				---Resolve project-local tsx; never rely on PATH.
@@ -230,14 +244,21 @@ return {
 					return config
 				end
 
-				local function launch(cfg)
+				-- Scopes only exist while paused. Open the panel on stop so it's obvious.
+				dap.listeners.after.event_stopped["mico_open_dap_view"] = function()
+					local ok, view = pcall(require, "dap-view")
+					if ok then
+						view.open()
+					end
+				end
+
+				local function launch(cfg, maps)
 					return vim.tbl_deep_extend("force", {
 						type = "pwa-node",
 						request = "launch",
 						cwd = "${workspaceFolder}",
 						console = "integratedTerminal",
-						autoAttachChildProcesses = true,
-					}, source_maps, cfg)
+					}, maps or node_maps, cfg)
 				end
 
 				local function attach(cfg)
@@ -245,51 +266,64 @@ return {
 						type = "pwa-node",
 						request = "attach",
 						cwd = "${workspaceFolder}",
-					}, source_maps, cfg)
+					}, node_maps, cfg)
 				end
 
 				local function launch_tsx(cfg)
 					cfg.mico_use_local_tsx = true
-					-- runtimeExecutable filled in on_config from node_modules
 					cfg.runtimeExecutable = "tsx"
-					return launch(cfg)
+					-- Direct tsx: stay on one session (child attach confuses scopes).
+					cfg.autoAttachChildProcesses = false
+					return launch(cfg, tsx_maps)
 				end
 
 				local js_ts = {
 					launch_tsx({
 						name = "tsx: src/main.ts",
 						args = { "${workspaceFolder}/src/main.ts" },
+						-- Pause immediately so Scopes has a frame (continue with <leader>dc).
+						stopOnEntry = true,
+					}),
+					launch_tsx({
+						name = "tsx: src/main.ts (no stop on entry)",
+						args = { "${workspaceFolder}/src/main.ts" },
+						stopOnEntry = false,
 					}),
 					launch_tsx({
 						name = "tsx: current file",
 						args = { "${file}" },
+						stopOnEntry = true,
 					}),
 					launch_tsx({
 						name = "tsx watch: src/main.ts",
 						args = { "watch", "${workspaceFolder}/src/main.ts" },
 						restart = true,
+						autoAttachChildProcesses = true,
+						stopOnEntry = false,
 					}),
-					-- npm finds local bins via the script PATH
 					launch({
 						name = "npm: run dev",
 						runtimeExecutable = "npm",
 						runtimeArgs = { "run", "dev" },
 						restart = true,
-					}),
+						autoAttachChildProcesses = true,
+					}, node_maps),
 					launch({
 						name = "npm: start",
 						runtimeExecutable = "npm",
 						runtimeArgs = { "start" },
-					}),
+						autoAttachChildProcesses = true,
+					}, node_maps),
 					launch({
 						name = "npm: test",
 						runtimeExecutable = "npm",
 						runtimeArgs = { "test" },
-					}),
+						autoAttachChildProcesses = true,
+					}, node_maps),
 					launch({
 						name = "node: current file (JS only)",
 						program = "${file}",
-					}),
+					}, node_maps),
 					attach({
 						name = "Attach (pick process)",
 						processId = require("dap.utils").pick_process,
@@ -323,21 +357,20 @@ return {
 			winbar = {
 				show = true,
 				show_keymap_hints = true,
-				-- One window: cycle with Tab / 1-4 (see keymaps + base_sections)
-				sections = { "scopes", "watches", "repl", "console" },
+				sections = { "scopes", "watches", "repl", "console", "sessions" },
 				default_section = "scopes",
 				base_sections = {
 					scopes = { label = "Scopes", keymap = "1" },
 					watches = { label = "Watches", keymap = "2" },
 					repl = { label = "REPL", keymap = "3" },
 					console = { label = "Console", keymap = "4" },
+					sessions = { label = "Sessions", keymap = "5" },
 				},
 			},
 			windows = {
 				position = "right",
 				size = 0.33,
 				terminal = {
-					-- Console lives in the winbar section above — no separate split
 					hide = true,
 					position = "below",
 					size = 0.25,
