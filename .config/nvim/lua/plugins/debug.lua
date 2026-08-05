@@ -129,15 +129,18 @@ return {
 
 			-- JS/TS via mason js-debug-adapter (vscode-js-debug).
 			--
-			-- Prefer launching tsx directly over `npm run` + `tsx watch`: the watcher
-			-- parent rarely exposes a paused JS context ("No eligible scopes").
-			-- Do not set console=integratedTerminal — that opens a second split;
-			-- process I/O goes to dap-view's Console section instead.
+			-- tsx is almost never on PATH — only node_modules/.bin/tsx. Bare
+			-- runtimeExecutable="tsx" makes the adapter spawn fail → "Debug adapter disconnected".
+			--
+			-- console=integratedTerminal creates a term_buf; dap-view's dap-defaults
+			-- sets terminal_win_cmd to a hidden buffer, and the Console section shows it
+			-- (no extra split when terminal.hide = true and console is in winbar.sections).
 			local js_debug = vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
 			if vim.uv.fs_stat(js_debug) or vim.fn.filereadable(js_debug) == 1 then
 				dap.adapters["pwa-node"] = {
 					type = "server",
-					host = "localhost",
+					-- 127.0.0.1 avoids localhost→IPv6 disconnects on some systems
+					host = "127.0.0.1",
 					port = "${port}",
 					executable = {
 						command = "node",
@@ -163,13 +166,49 @@ return {
 					},
 				}
 
+				---Resolve project-local tsx; never rely on PATH.
+				local function local_tsx()
+					local root = vim.fn.getcwd()
+					local candidates = {
+						root .. "/node_modules/.bin/tsx",
+						root .. "/node_modules/tsx/dist/cli.mjs",
+					}
+					for _, path in ipairs(candidates) do
+						if vim.fn.filereadable(path) == 1 or vim.fn.executable(path) == 1 then
+							return path
+						end
+					end
+					return nil
+				end
+
+				-- Enrich launch configs that ask for local tsx before the adapter runs.
+				dap.listeners.on_config = dap.listeners.on_config or {}
+				dap.listeners.on_config["mico_tsx_resolve"] = function(config)
+					if not config.mico_use_local_tsx then
+						return config
+					end
+					local tsx = local_tsx()
+					if not tsx then
+						vim.notify(
+							"tsx not found under "
+								.. vim.fn.getcwd()
+								.. "/node_modules — run npm i and open nvim from the project root",
+							vim.log.levels.ERROR
+						)
+						return config
+					end
+					config = vim.deepcopy(config)
+					config.runtimeExecutable = tsx
+					config.mico_use_local_tsx = nil
+					return config
+				end
+
 				local function launch(cfg)
 					return vim.tbl_deep_extend("force", {
 						type = "pwa-node",
 						request = "launch",
 						cwd = "${workspaceFolder}",
-						-- internalConsole: no extra nvim terminal split (dap-view Console tab)
-						console = "internalConsole",
+						console = "integratedTerminal",
 						autoAttachChildProcesses = true,
 					}, source_maps, cfg)
 				end
@@ -182,25 +221,28 @@ return {
 					}, source_maps, cfg)
 				end
 
+				local function launch_tsx(cfg)
+					cfg.mico_use_local_tsx = true
+					-- runtimeExecutable filled in on_config from node_modules
+					cfg.runtimeExecutable = "tsx"
+					return launch(cfg)
+				end
+
 				local js_ts = {
-					-- Best for bots/apps with a fixed entry (your tectonic-bot layout)
-					launch({
+					launch_tsx({
 						name = "tsx: src/main.ts",
-						runtimeExecutable = "tsx",
 						args = { "${workspaceFolder}/src/main.ts" },
 					}),
-					launch({
+					launch_tsx({
 						name = "tsx: current file",
-						runtimeExecutable = "tsx",
 						args = { "${file}" },
 					}),
-					-- Watch restarts children; attach is flaky — use only if you need reload
-					launch({
+					launch_tsx({
 						name = "tsx watch: src/main.ts",
-						runtimeExecutable = "tsx",
 						args = { "watch", "${workspaceFolder}/src/main.ts" },
 						restart = true,
 					}),
+					-- npm finds local bins via the script PATH
 					launch({
 						name = "npm: run dev",
 						runtimeExecutable = "npm",
@@ -227,7 +269,7 @@ return {
 					}),
 					attach({
 						name = "Attach port 9229",
-						address = "localhost",
+						address = "127.0.0.1",
 						port = 9229,
 					}),
 				}
