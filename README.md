@@ -419,6 +419,12 @@ package (a store login shell can lock you out after GC), or use
   Syncthing or similar — it is a live SQLite database and file-syncing corrupts
   it. Use atuin's own encrypted sync if you want cross-machine history.
 - `~/.zshrc` is a read-only store symlink. Editing it does nothing.
+- **btop cannot save settings changed inside the app.** `btop.conf` is generated
+  from `programs.btop.settings`, so it is a read-only store symlink and btop's
+  write-on-exit fails. Same trade-off as `~/.zshrc`: change it in `home/tools.nix`
+  and run `hms`. Note btop normalises `True` to `true` when it *can* write, which
+  is why the generated capitalisation is harmless - verified that btop keeps our
+  values rather than reverting to its defaults.
 - `dotDir` is pinned to `$HOME`; the default moves to `$XDG_CONFIG_HOME/zsh` at
   stateVersion 26.05.
 - Nothing secret goes in this repo, it's public. Git identity lives in untracked

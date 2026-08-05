@@ -47,7 +47,7 @@
       duf
 
       # system
-      btop
+      # btop is installed by programs.btop in tools.nix, not listed here.
       fastfetch
 
       # Wayland clipboard. Needed for neovim's "+y on Hyprland and for anything

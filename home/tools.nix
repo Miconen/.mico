@@ -61,6 +61,33 @@
   programs.nix-index.enable = true;
   programs.nix-index-database.comma.enable = true;
 
+  # btop replaces htop. Managed through the module rather than as a bare package
+  # so btop.conf is generated instead of btop writing its own on first run - which
+  # would then drift silently and never reproduce on another machine.
+  programs.btop = {
+    enable = true;
+
+    # `themes` takes a path, so the file is vendored like the bat theme and the
+    # zellij config rather than being inlined into Nix.
+    themes.catppuccin_mocha = ../config/btop/catppuccin_mocha.theme;
+
+    settings = {
+      # Matches the theme filename above, without the .theme suffix.
+      color_theme = "catppuccin_mocha";
+
+      # Let kitty's background show through instead of btop painting its own.
+      # Both are Catppuccin #1e1e2e, so this only matters if kitty ever gets
+      # transparency.
+      theme_background = false;
+
+      # hjkl and gg/G, consistent with neovim, zellij and tmux's mode-keys vi.
+      vim_keys = true;
+
+      # update_ms is left at btop's default of 2000. This is a Carrizo-era APU, so
+      # a faster refresh costs more than it is worth.
+    };
+  };
+
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
