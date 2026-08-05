@@ -13,16 +13,12 @@ autocmd("TextYankPost", {
 	end,
 })
 
--- Remove trailing whitespace on save
-autocmd("BufWritePre", {
-	group = augroup("trim_whitespace", { clear = true }),
-	desc = "Remove trailing whitespace on save",
-	callback = function()
-		local pos = vim.api.nvim_win_get_cursor(0)
-		vim.cmd([[%s/\s\+$//e]])
-		vim.api.nvim_win_set_cursor(0, pos)
-	end,
-})
+-- Trailing whitespace is deliberately NOT handled here. conform.nvim already
+-- formats on save with lsp_format = "fallback" (see plugins/lsp.lua), so for every
+-- filetype with a formatter this was redundant work on the same write. It also ran
+-- `:%s/\s\+$//e` against every buffer type, which clobbered the last-search
+-- register on each save. If an unformatted filetype ever needs trimming, add a
+-- formatter for it in conform rather than reinstating a global substitute.
 
 -- Resize splits when window is resized
 autocmd("VimResized", {

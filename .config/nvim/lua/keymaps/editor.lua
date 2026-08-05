@@ -5,6 +5,7 @@ local map = vim.keymap.set
 -- ── Group labels ────────────────────────────────────────────────────────────
 wk.add({
 	{ "<leader>n", group = "󰅌 Notes" },
+	{ "<leader>w", group = " Windows" },
 })
 
 -- ── Window navigation ────────────────────────────────────────────────────────
@@ -14,8 +15,17 @@ map("n", "<C-j>", "<C-w>j", { desc = "Move to lower window" })
 map("n", "<C-k>", "<C-w>k", { desc = "Move to upper window" })
 
 -- ── Splits ───────────────────────────────────────────────────────────────────
-map("n", "vs", "<cmd>vsplit<cr>", { desc = "Vertical split" })
-map("n", "sp", "<cmd>split<cr>", { desc = "Horizontal split" })
+-- Under <leader>w rather than the old `sp` / `vs`.
+--
+-- `sp` made `s` an ambiguous prefix, and `vs` did the same to `v`, so Neovim had
+-- to wait out `timeoutlen` (350ms) on every press to see whether a second key
+-- was coming. That delayed flash.nvim's `s` jump and entering visual mode with
+-- `v` - two of the most-pressed keys there are.
+map("n", "<leader>ws", "<cmd>split<cr>", { desc = "Horizontal split" })
+map("n", "<leader>wv", "<cmd>vsplit<cr>", { desc = "Vertical split" })
+map("n", "<leader>wc", "<cmd>close<cr>", { desc = "Close window" })
+map("n", "<leader>wo", "<cmd>only<cr>", { desc = "Close other windows" })
+map("n", "<leader>w=", "<C-w>=", { desc = "Balance windows" })
 
 -- ── Misc editing ─────────────────────────────────────────────────────────────
 map("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })

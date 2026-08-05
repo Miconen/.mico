@@ -49,8 +49,11 @@ map("n", "<leader>s<CR>", function()
 	Snacks.picker.resume()
 end, { desc = "Resume last search" })
 
+-- todo-comments registers a Snacks picker source when Snacks is present, so this
+-- goes through the picker you actually have. The old `TodoTelescope` command only
+-- exists when telescope is installed, which it is not - that bind was dead.
 map("n", "<leader>st", function()
-	vim.cmd("TodoTelescope")
+	Snacks.picker.todo_comments()
 end, { desc = "Todo comments" })
 
 map("n", "<leader>snf", function()
