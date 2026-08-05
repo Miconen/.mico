@@ -134,6 +134,9 @@ return {
 
 			require("dap-python").setup(vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python")
 
+			-- JS/TS via mason js-debug-adapter (vscode-js-debug).
+			-- Plain `node ${file}` does not read tsconfig paths or run .ts — use tsx
+			-- (or attach to a process you started with the project's real entry).
 			local js_debug = vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
 			if vim.uv.fs_stat(js_debug) or vim.fn.filereadable(js_debug) == 1 then
 				dap.adapters["pwa-node"] = {
@@ -147,23 +150,87 @@ return {
 				}
 				dap.adapters["pwa-chrome"] = dap.adapters["pwa-node"]
 
+				local js_ts = {
+					{
+						type = "pwa-node",
+						request = "launch",
+						name = "tsx: current file",
+						runtimeExecutable = "tsx",
+						runtimeArgs = { "--tsconfig", "${workspaceFolder}/tsconfig.json" },
+						args = { "${file}" },
+						cwd = "${workspaceFolder}",
+						sourceMaps = true,
+						resolveSourceMapLocations = {
+							"${workspaceFolder}/**",
+							"!**/node_modules/**",
+						},
+						skipFiles = { "<node_internals>/**", "${workspaceFolder}/node_modules/**" },
+						console = "integratedTerminal",
+					},
+					{
+						type = "pwa-node",
+						request = "launch",
+						name = "tsx: current file (no tsconfig flag)",
+						runtimeExecutable = "tsx",
+						args = { "${file}" },
+						cwd = "${workspaceFolder}",
+						sourceMaps = true,
+						skipFiles = { "<node_internals>/**", "${workspaceFolder}/node_modules/**" },
+						console = "integratedTerminal",
+					},
+					{
+						type = "pwa-node",
+						request = "launch",
+						name = "node: current file (JS only)",
+						program = "${file}",
+						cwd = "${workspaceFolder}",
+						sourceMaps = true,
+						skipFiles = { "<node_internals>/**", "${workspaceFolder}/node_modules/**" },
+						console = "integratedTerminal",
+					},
+					{
+						type = "pwa-node",
+						request = "launch",
+						name = "npm: run dev",
+						runtimeExecutable = "npm",
+						runtimeArgs = { "run", "dev" },
+						cwd = "${workspaceFolder}",
+						console = "integratedTerminal",
+						skipFiles = { "<node_internals>/**", "${workspaceFolder}/node_modules/**" },
+					},
+					{
+						type = "pwa-node",
+						request = "launch",
+						name = "npm: test",
+						runtimeExecutable = "npm",
+						runtimeArgs = { "test" },
+						cwd = "${workspaceFolder}",
+						console = "integratedTerminal",
+						skipFiles = { "<node_internals>/**", "${workspaceFolder}/node_modules/**" },
+					},
+					{
+						type = "pwa-node",
+						request = "attach",
+						name = "Attach (pick process)",
+						processId = require("dap.utils").pick_process,
+						cwd = "${workspaceFolder}",
+						sourceMaps = true,
+						skipFiles = { "<node_internals>/**", "${workspaceFolder}/node_modules/**" },
+					},
+					{
+						type = "pwa-node",
+						request = "attach",
+						name = "Attach port 9229",
+						address = "localhost",
+						port = 9229,
+						cwd = "${workspaceFolder}",
+						sourceMaps = true,
+						skipFiles = { "<node_internals>/**", "${workspaceFolder}/node_modules/**" },
+					},
+				}
+
 				for _, language in ipairs({ "typescript", "javascript", "typescriptreact", "javascriptreact" }) do
-					dap.configurations[language] = {
-						{
-							type = "pwa-node",
-							request = "launch",
-							name = "Launch file",
-							program = "${file}",
-							cwd = "${workspaceFolder}",
-						},
-						{
-							type = "pwa-node",
-							request = "attach",
-							name = "Attach",
-							processId = require("dap.utils").pick_process,
-							cwd = "${workspaceFolder}",
-						},
-					}
+					dap.configurations[language] = js_ts
 				end
 			end
 		end,
