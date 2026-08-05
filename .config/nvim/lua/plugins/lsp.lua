@@ -26,7 +26,7 @@ return {
 
 	-- Mason: install/manage LSP servers, formatters, linters
 	{
-		"williamboman/mason.nvim",
+		"mason-org/mason.nvim",
 		cmd = {
 			"Mason",
 			"MasonInstall",
@@ -47,7 +47,7 @@ return {
 	},
 
 	-- Mason <-> lspconfig bridge
-	{ "williamboman/mason-lspconfig.nvim", lazy = true },
+	{ "mason-org/mason-lspconfig.nvim", lazy = true },
 
 	-- Ensures formatters/linters are installed via mason
 	{ "WhoIsSethDaniel/mason-tool-installer.nvim", lazy = true },
@@ -57,8 +57,8 @@ return {
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufNewFile" },
 		dependencies = {
-			"williamboman/mason.nvim",
-			"williamboman/mason-lspconfig.nvim",
+			"mason-org/mason.nvim",
+			"mason-org/mason-lspconfig.nvim",
 			"WhoIsSethDaniel/mason-tool-installer.nvim",
 			{ "j-hui/fidget.nvim", opts = {} },
 			"saghen/blink.cmp",

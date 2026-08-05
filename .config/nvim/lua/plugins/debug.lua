@@ -6,7 +6,7 @@ return {
 			"rcarriga/nvim-dap-ui",
 			"nvim-neotest/nvim-nio", -- required by dap-ui
 			"theHamsta/nvim-dap-virtual-text",
-			"williamboman/mason.nvim", -- already have this
+			"mason-org/mason.nvim", -- already declared in plugins/lsp.lua
 			-- Language adapters
 			"leoluz/nvim-dap-go",
 			"mfussenegger/nvim-dap-python",
