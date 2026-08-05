@@ -210,13 +210,26 @@ Want: nix paths first, `history completion`, `history-substring-search-up`,
 ## zellij
 
 ```
-Ctrl-g   lock / unlock (pass keys straight through to the terminal)
-Ctrl-p   pane      Ctrl-t   tab       Ctrl-n   resize
-Ctrl-s   scroll    Ctrl-m   move      (in tab mode: , / . break pane left/right)
-Alt-d    detach            Ctrl-q   quit (DESTROYS the session)
-Alt-, / Alt-.     cycle swap layouts   (Alt-[ / Alt-] also work)
-Alt-h/j/k/l       move focus        Alt-n   new pane
+Alt-p    pane      Alt-t    tab       Alt-r    resize
+Alt-s    scroll    Alt-m    move
+Alt-d    detach    Alt-n    new pane  Alt-h/j/k/l  move focus
+Ctrl-g   lock / unlock       Ctrl-q   quit (DESTROYS the session)
+in pane mode:  , / .  cycle swap layouts
+in tab mode:   , / .  break pane left/right
 ```
+
+**Mode entry is on Alt, not Ctrl.** Ctrl-p/n/s/t/m used to be mode switches, which
+meant zellij ate blink.cmp's `<C-n>`/`<C-p>` completion keys and fzf's `Ctrl-T`
+widget - the reason for constantly reaching for Ctrl-g. Globally, zellij now
+intercepts only **Ctrl-g and Ctrl-q**; Ctrl-b and Ctrl-f exist but only inside
+scroll and search modes.
+
+Alt is not free either, it just collides with different things. zsh's emacs keymap
+binds nearly every Alt letter, so this deliberately costs three rarely-used ones -
+`Alt-p` history-search-backward, `Alt-s` spell-word, `Alt-t` transpose-words - while
+leaving `Alt-c` alone, since that is fzf's directory widget. `Alt-.`
+(insert-last-word) is also left alone, which is why swap layouts moved into pane
+mode rather than keeping a global binding.
 
 Bindings avoid `[` and `]` as primaries: on a Finnish ISO keyboard those are
 AltGr+8 / AltGr+9, so `Alt-[` is effectively unreachable. `,` and `.` are
