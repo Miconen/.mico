@@ -39,7 +39,7 @@ jobs:
   # not nixfmt-canonical yet. Run `nix fmt` locally, commit, then delete the
   # continue-on-error below to make formatting enforced.
   lint:
-    name: lint (advisory)
+    name: lint
     runs-on: ubuntu-latest
     continue-on-error: false
     steps:
