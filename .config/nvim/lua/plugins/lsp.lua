@@ -76,7 +76,10 @@ return {
 					virtual_text = true,
 					underline = true,
 					severity_sort = true,
-					update_in_insert = true,
+					-- false on purpose: true recomputes and redraws diagnostics on every
+					-- keystroke, which is the single most expensive default in this config
+					-- on modest hardware. Diagnostics still refresh on InsertLeave.
+					update_in_insert = false,
 					float = {
 						focused = false,
 						style = "minimal",

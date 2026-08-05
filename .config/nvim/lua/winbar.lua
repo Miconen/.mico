@@ -30,14 +30,14 @@ local function hlfmt(group, text)
 	return "%#" .. group .. "#" .. text .. "%*"
 end
 
-local function build()
-	if SKIP_FT[vim.bo.filetype] or vim.bo.buftype ~= "" then
-		return ""
-	end
-
+-- The path portion of the breadcrumb only changes when the buffer or its name
+-- changes, so it is built once and cached in a buffer variable. It used to be
+-- rebuilt on every CursorMoved - an expand(), three fnamemodify() calls and a
+-- mini.icons lookup per cursor movement.
+local function build_prefix()
 	local fullpath = vim.fn.expand("%:p")
 	if fullpath == "" then
-		return ""
+		return nil
 	end
 
 	local cwd_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
@@ -72,22 +72,58 @@ local function build()
 	table.insert(parts, hlfmt("WinBarSep", SEP))
 	table.insert(parts, hlfmt(file_icon_hl, file_icon) .. hlfmt("WinBarFile", filename))
 
+	return " " .. table.concat(parts)
+end
+
+local function prefix()
+	if vim.b.winbar_prefix == nil then
+		-- false rather than nil, so an unnamed buffer is cached as "no prefix"
+		-- instead of being recomputed on every cursor movement.
+		vim.b.winbar_prefix = build_prefix() or false
+	end
+	if vim.b.winbar_prefix == false then
+		return nil
+	end
+	return vim.b.winbar_prefix
+end
+
+local function build()
+	if SKIP_FT[vim.bo.filetype] or vim.bo.buftype ~= "" then
+		return ""
+	end
+
+	local head = prefix()
+	if not head then
+		return ""
+	end
+
 	-- LSP symbol context: › [symbol type icon] symbol name  (only when inside a block)
 	local navic_ok, navic = pcall(require, "nvim-navic")
 	if navic_ok and navic.is_available() then
 		local ctx = navic.get_location()
 		if ctx and ctx ~= "" then
-			table.insert(parts, hlfmt("WinBarSep", SEP))
-			table.insert(parts, ctx) -- navic handles its own per-kind icons + highlights
+			return head .. hlfmt("WinBarSep", SEP) .. ctx
 		end
 	end
 
-	return " " .. table.concat(parts)
+	return head
 end
 
 function M.setup()
 	local group = vim.api.nvim_create_augroup("custom_winbar", { clear = true })
-	vim.api.nvim_create_autocmd({ "BufEnter", "CursorMoved", "CursorMovedI", "InsertLeave" }, {
+
+	-- Invalidate the cached path whenever the buffer's identity could change.
+	vim.api.nvim_create_autocmd({ "BufFilePost", "BufWritePost", "DirChanged" }, {
+		group = group,
+		callback = function()
+			vim.b.winbar_prefix = nil
+		end,
+	})
+
+	-- CursorMovedI is deliberately absent: breadcrumbs do not need to update on
+	-- every keystroke, and this callback used to be the most expensive thing
+	-- running in insert mode.
+	vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter", "CursorMoved", "InsertLeave" }, {
 		group = group,
 		callback = function()
 			-- Skip floating windows (pickers, hovers, etc.)

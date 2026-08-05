@@ -88,7 +88,11 @@ local function get_diagnostics()
 	return table.concat(parts, "  ")
 end
 
-local function get_lsp_and_formatter_status()
+-- Both lookups below are relatively expensive and were previously running on every
+-- statusline redraw, i.e. roughly every cursor movement. They only change when a
+-- client attaches or detaches, or when the buffer/filetype changes, so the result
+-- is computed in an autocmd (see M.setup) and cached per buffer.
+local function compute_lsp_and_formatter_status()
 	if SKIP_FILETYPES[vim.bo.filetype] then
 		return ""
 	end
@@ -105,6 +109,13 @@ local function get_lsp_and_formatter_status()
 	end
 
 	return table.concat(parts, "  ")
+end
+
+local function get_lsp_and_formatter_status()
+	if vim.b.sl_lsp_status == nil then
+		vim.b.sl_lsp_status = compute_lsp_and_formatter_status()
+	end
+	return vim.b.sl_lsp_status
 end
 
 local function get_macro_status()
@@ -142,6 +153,20 @@ local function get_filename()
 end
 
 function M.setup()
+	local group = vim.api.nvim_create_augroup("custom_statusline", { clear = true })
+	vim.api.nvim_create_autocmd({
+		"LspAttach",
+		"LspDetach",
+		"BufEnter",
+		"BufWritePost",
+		"FileType",
+	}, {
+		group = group,
+		callback = function()
+			vim.b.sl_lsp_status = nil
+		end,
+	})
+
 	local statusline = require("mini.statusline")
 
 	statusline.setup({
