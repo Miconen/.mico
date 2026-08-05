@@ -341,6 +341,9 @@ return {
 			"windwp/nvim-autopairs",
 		},
 		opts = {
+			enabled = function()
+				return not vim.tbl_contains({ "minifiles", "minifiles-help" }, vim.bo.filetype)
+			end,
 			keymap = {
 				preset = "default",
 				["<C-y>"] = { "select_and_accept" },
