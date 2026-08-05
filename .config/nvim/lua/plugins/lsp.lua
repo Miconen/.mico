@@ -233,15 +233,28 @@ return {
 			})
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
-			require("mason-lspconfig").setup({
-				handlers = {
-					function(server_name)
-						local server = servers[server_name] or {}
-						server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
-						require("lspconfig")[server_name].setup(server)
-					end,
-				},
-			})
+			-- mason-lspconfig 2.x. Its `handlers` table is gone; it can now enable
+			-- servers itself via automatic_enable, but that keys off whatever happens to
+			-- be installed in Mason. Turning it off keeps the `servers` table above as
+			-- the single source of truth. It is still set up because mason-tool-installer
+			-- relies on it to translate lspconfig names (lua_ls) into Mason package names
+			-- (lua-language-server).
+			require("mason-lspconfig").setup({ automatic_enable = false })
+
+			-- Shared capabilities for every server. "*" is a real wildcard config in
+			-- vim.lsp, not a server name.
+			vim.lsp.config("*", { capabilities = capabilities })
+
+			-- Per-server overrides. The base config for each of these ships with
+			-- nvim-lspconfig as lsp/<name>.lua and is picked up off the runtimepath by
+			-- Neovim itself, so only the deltas belong here.
+			for name, cfg in pairs(servers) do
+				if next(cfg) ~= nil then
+					vim.lsp.config(name, cfg)
+				end
+			end
+
+			vim.lsp.enable(vim.tbl_keys(servers))
 		end,
 	},
 

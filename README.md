@@ -77,6 +77,11 @@ working tree, which is required: lazy.nvim writes `lazy-lock.json` into the conf
 directory and a store path is read-only. Plugin updates therefore show up as a
 modified lockfile in `git status` - commit it.
 
+After pulling a commit that moves `lazy-lock.json`, run `:Lazy restore` so plugins
+match the lockfile, then `:TSUpdate`. The treesitter rewrite pins parser versions
+in its own `parser.lua`, so parsers must be rebuilt whenever that plugin moves -
+this is not optional, mismatched parsers crash highlighting.
+
 CI runs `stylua --check` and `selene`, matching the tools already in the
 mason-tool-installer list. Both are configured for zero findings, so anything new
 is a real signal:
