@@ -29,18 +29,28 @@ machine you care about.
 
 It does: btrfs subvolume for `/nix` → install nix → `auto-optimise-store` →
 pacman sync → pacman.conf → build paru → AUR sync → `~/.gitconfig.local` → `home-manager switch` → remove pacman packages nix
-replaced → podman storage driver → `podman.socket` → system maintenance timers →
-root-level GC timer.
+replaced → podman (tun module, storage driver) → `podman.socket` → system
+maintenance timers → root-level GC timer.
 
-Rootless podman's graph driver is filesystem-dependent, so it cannot be a static
-config file: this laptop's home is btrfs, where the default `overlay` driver
-refuses to run (`'overlay' is not supported over btrfs`), while WSL is ext4 where
-`overlay` is correct and btrfs would fail the same way.
-`scripts/podman-storage.sh` detects the filesystem, writes
-`~/.config/containers/storage.conf` only when an override is needed, and deletes a
-store built with the other driver — podman never migrates one, it keeps erroring
-until it is gone. Both bootstrap and every `hms` run it, and it leaves a
-hand-written `storage.conf` alone.
+Rootless podman needs three things that are easy to miss, all handled
+automatically:
+
+- **A graph driver that matches the filesystem.** This cannot be a static config
+  file: home is btrfs here, where the default `overlay` driver is refused
+  (`'overlay' is not supported over btrfs`), while WSL is ext4 where `overlay` is
+  correct and btrfs would fail the same way. `scripts/podman-storage.sh` detects
+  the filesystem, tries the native btrfs driver then `fuse-overlayfs`, and keeps
+  whichever podman actually accepts. It also deletes a store left behind by a
+  different driver — containers/storage prefers whichever driver already has a
+  directory in the graphroot over the one in `storage.conf`, so a stale
+  `overlay/` silently wins. Run it with `--diagnose` to dump what podman reads.
+- **The `tun` module.** Without `/dev/net/tun`, pasta cannot set up a tap device
+  and every build fails at `Failed to open() /dev/net/tun`. bootstrap loads it
+  and declares it in `/etc/modules-load.d/tun.conf` for the next boot.
+- **An unqualified search registry.** Arch's short-name aliases cover `golang`
+  but not `postgres` or `adminer`, which otherwise fail to resolve at all.
+  `config/containers/registries.conf` sets `docker.io` and
+  `short-name-mode = "permissive"` so nothing prompts mid-build.
 
 The maintenance timers are all off by default on Arch: `fstrim.timer` (SSD TRIM),
 `btrfs-scrub@-.timer` (monthly checksum scrub of `/` — btrfs stores checksums but

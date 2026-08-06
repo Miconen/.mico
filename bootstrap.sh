@@ -651,13 +651,39 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 9. podman storage
+# 9. podman
 #
-# Deliberately outside the systemd gate below: the graph driver matters even
-# where the rootless socket cannot run, and `podman compose` fails without it.
-# home-manager re-runs the same script on every activation.
+# Deliberately outside the systemd gate below: both of these matter even where
+# the rootless socket cannot run, and `podman compose` fails without them.
+# home-manager re-runs the storage script on every activation.
 # ---------------------------------------------------------------------------
-step "Podman storage"
+step "Podman"
+
+# Rootless networking (pasta, and slirp4netns) needs a tap device. Without the
+# tun module every container build dies at:
+#   pasta failed ... Failed to open() /dev/net/tun: No such device
+if [[ -e /dev/net/tun ]]; then
+  skip "/dev/net/tun present"
+elif ! command -v modprobe >/dev/null; then
+  warn "no modprobe - cannot load the tun module for rootless networking"
+else
+  ok "loading the tun module (rootless container networking needs it)"
+  run sudo modprobe tun || warn "modprobe tun failed - rootless networking will not work"
+fi
+
+# modprobe above does not survive a reboot.
+tun_modconf=/etc/modules-load.d/tun.conf
+if [[ -f $tun_modconf ]] && grep -qx 'tun' "$tun_modconf"; then
+  skip "tun already declared in $tun_modconf"
+elif [[ ! -d /etc/modules-load.d ]]; then
+  skip "no /etc/modules-load.d - not a systemd system"
+else
+  ok "declaring tun in $tun_modconf so it loads at boot"
+  tun_tmp="$(mktemp)"
+  printf 'tun\n' >"$tun_tmp"
+  run sudo install -Dm644 "$tun_tmp" "$tun_modconf"
+  rm -f "$tun_tmp"
+fi
 
 podman_storage_script="$REPO/scripts/podman-storage.sh"
 if ! command -v podman >/dev/null; then

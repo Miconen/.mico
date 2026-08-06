@@ -124,6 +124,11 @@
   xdg.configFile = {
     "zellij/config.kdl".source = ../config/zellij/config.kdl;
     "zellij/layouts/default.kdl".source = ../config/zellij/layouts/default.kdl;
+
+    # Unlike storage.conf below, this one is filesystem-independent, so it can be
+    # a plain managed file. It fixes bare image names like `postgres:latest`,
+    # which Arch's short-name aliases do not cover.
+    "containers/registries.conf".source = ../config/containers/registries.conf;
   };
 
   # ---------------------------------------------------------------------------
