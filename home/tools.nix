@@ -1,6 +1,6 @@
 {
   lib,
-  config,
+  repoPath,
   ...
 }:
 {
@@ -124,29 +124,32 @@
   xdg.configFile = {
     "zellij/config.kdl".source = ../config/zellij/config.kdl;
     "zellij/layouts/default.kdl".source = ../config/zellij/layouts/default.kdl;
-    # Rootless podman on btrfs home — see config/containers/storage.conf.
-    "containers/storage.conf".source = ../config/containers/storage.conf;
   };
 
-  # storage.conf alone is not enough if a previous run already created an
-  # overlay store: podman keeps targeting .../storage/overlay and errors.
-  # Drop that incompatible store once so the btrfs driver can initialize.
-  home.activation.podmanBtrfsStorage = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    store="${config.home.homeDirectory}/.local/share/containers/storage"
-    conf="${config.home.homeDirectory}/.config/containers/storage.conf"
-    if [ ! -f "$conf" ] || ! grep -q 'driver = "btrfs"' "$conf"; then
-      warnEcho "podman storage.conf missing btrfs driver at $conf (hms incomplete?)"
-    fi
-    if [ -d "$store/overlay" ] || [ -d "$store/overlay-images" ] || [ -d "$store/overlay-layers" ]; then
-      noteEcho "removing leftover podman overlay store (incompatible with btrfs driver)"
-      # Stop rootless API so it does not hold files open.
-      if command -v systemctl >/dev/null; then
-        $DRY_RUN_CMD systemctl --user stop podman.socket podman.service 2>/dev/null || true
-      fi
-      $DRY_RUN_CMD rm -rf "$store"
-      if command -v systemctl >/dev/null; then
-        $DRY_RUN_CMD systemctl --user start podman.socket 2>/dev/null || true
-      fi
+  # ---------------------------------------------------------------------------
+  # Rootless podman storage.
+  #
+  # NOT an xdg.configFile: the correct graph driver depends on the filesystem
+  # backing ~/.local/share/containers, which is not knowable at build time. The
+  # laptop is btrfs, where podman's default overlay driver refuses to run; WSL is
+  # ext4, where overlay is right and btrfs would fail the same way. A single
+  # static storage.conf shared by both hosts is therefore wrong on one of them.
+  #
+  # scripts/podman-storage.sh detects the filesystem, writes storage.conf only
+  # when an override is needed, and removes a store built with the other driver
+  # (podman never migrates one, it just keeps erroring). bootstrap.sh runs the
+  # same script, so a fresh machine is fixed before the first `podman compose`.
+  # ---------------------------------------------------------------------------
+  home.activation.podmanStorage = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    script="${repoPath}/scripts/podman-storage.sh"
+    if [ ! -x "$script" ]; then
+      verboseEcho "podman storage script missing at $script - skipping"
+    elif ! command -v podman >/dev/null; then
+      verboseEcho "podman not installed - skipping storage setup"
+    else
+      # --quiet keeps activation output clean; it still prints on change.
+      $DRY_RUN_CMD "$script" --quiet || \
+        warnEcho "podman storage setup failed - run $script by hand"
     fi
   '';
 }

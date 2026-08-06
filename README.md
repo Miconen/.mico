@@ -29,8 +29,18 @@ machine you care about.
 
 It does: btrfs subvolume for `/nix` → install nix → `auto-optimise-store` →
 pacman sync → pacman.conf → build paru → AUR sync → `~/.gitconfig.local` → `home-manager switch` → remove pacman packages nix
-replaced → rootless podman `storage.conf` (btrfs driver) + `podman.socket` →
-system maintenance timers → root-level GC timer.
+replaced → podman storage driver → `podman.socket` → system maintenance timers →
+root-level GC timer.
+
+Rootless podman's graph driver is filesystem-dependent, so it cannot be a static
+config file: this laptop's home is btrfs, where the default `overlay` driver
+refuses to run (`'overlay' is not supported over btrfs`), while WSL is ext4 where
+`overlay` is correct and btrfs would fail the same way.
+`scripts/podman-storage.sh` detects the filesystem, writes
+`~/.config/containers/storage.conf` only when an override is needed, and deletes a
+store built with the other driver — podman never migrates one, it keeps erroring
+until it is gone. Both bootstrap and every `hms` run it, and it leaves a
+hand-written `storage.conf` alone.
 
 The maintenance timers are all off by default on Arch: `fstrim.timer` (SSD TRIM),
 `btrfs-scrub@-.timer` (monthly checksum scrub of `/` — btrfs stores checksums but

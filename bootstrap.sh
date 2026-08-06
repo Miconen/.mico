@@ -651,52 +651,37 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 9. user services
+# 9. podman storage
+#
+# Deliberately outside the systemd gate below: the graph driver matters even
+# where the rootless socket cannot run, and `podman compose` fails without it.
+# home-manager re-runs the same script on every activation.
+# ---------------------------------------------------------------------------
+step "Podman storage"
+
+podman_storage_script="$REPO/scripts/podman-storage.sh"
+if ! command -v podman >/dev/null; then
+  skip "podman not installed"
+elif [[ ! -x $podman_storage_script ]]; then
+  warn "missing $podman_storage_script - skipping storage setup"
+else
+  # The script is idempotent and prints only when it changes something.
+  run "$podman_storage_script"
+fi
+
+# ---------------------------------------------------------------------------
+# 10. user services
 # ---------------------------------------------------------------------------
 step "User services"
 
 if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
   skip "systemd not running"
 else
-  # Rootless podman on btrfs home cannot use the default overlay driver.
-  # storage.conf is also installed by home-manager (config/containers/storage.conf);
-  # bootstrap writes it early so the first podman run before/after hms is safe.
-  if command -v podman >/dev/null; then
-    podman_storage_conf="$HOME/.config/containers/storage.conf"
-    repo_storage_conf="$REPO/config/containers/storage.conf"
-    mkdir -p "$HOME/.config/containers"
-    if [[ -f $repo_storage_conf ]]; then
-      if [[ -f $podman_storage_conf ]] && cmp -s "$repo_storage_conf" "$podman_storage_conf"; then
-        skip "podman storage.conf already matches repo"
-      else
-        ok "installing rootless podman storage.conf (btrfs driver)"
-        run cp "$repo_storage_conf" "$podman_storage_conf"
-      fi
-    else
-      warn "missing $repo_storage_conf - skip podman storage.conf"
-    fi
-
-    # Half-created overlay store on btrfs is unusable once driver=btrfs is set.
-    # Wipe it automatically so the next podman run can init a btrfs store.
-    store_root="$HOME/.local/share/containers/storage"
-    if [[ -d $store_root/overlay || -d $store_root/overlay-images || -d $store_root/overlay-layers ]]; then
-      ok "removing leftover podman overlay store (incompatible with btrfs driver)"
-      if command -v systemctl >/dev/null; then
-        run systemctl --user stop podman.socket podman.service 2>/dev/null || true
-      fi
-      run rm -rf "$store_root"
-    fi
-
-    if systemctl --user is-enabled podman.socket &>/dev/null; then
-      skip "podman.socket already enabled"
-    else
-      ok "enabling podman.socket (DOCKER_HOST points at it)"
-      run systemctl --user enable --now podman.socket || warn "could not enable podman.socket"
-    fi
-    # Restart if it was already up so it reloads storage.conf.
-    if systemctl --user is-active podman.socket &>/dev/null; then
-      run systemctl --user restart podman.socket || true
-    fi
+  if systemctl --user is-enabled podman.socket &>/dev/null; then
+    skip "podman.socket already enabled"
+  elif command -v podman >/dev/null; then
+    ok "enabling podman.socket (DOCKER_HOST points at it)"
+    run systemctl --user enable --now podman.socket || warn "could not enable podman.socket"
   else
     skip "podman not installed"
   fi
@@ -786,7 +771,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 10. root/system profile garbage collection
+# 11. root/system profile garbage collection
 #     home/nix-gc.nix only collects THIS user's profile. Root-owned system
 #     profile generations - created by nix upgrades and any root-level installs
 #     - accumulate unbounded and no user-level flake can reach them.
