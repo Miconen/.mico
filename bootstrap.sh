@@ -662,13 +662,34 @@ step "Podman"
 # Rootless networking (pasta, and slirp4netns) needs a tap device. Without the
 # tun module every container build dies at:
 #   pasta failed ... Failed to open() /dev/net/tun: No such device
+kernel_release="$(uname -r)"
 if [[ -e /dev/net/tun ]]; then
   skip "/dev/net/tun present"
+elif [[ ! -d /lib/modules/$kernel_release ]]; then
+  # `linux` is declared in packages/common.txt, so the pacman step above can
+  # upgrade the kernel out from under the running one. pacman removes the old
+  # module tree, and modprobe then fails for every module until a reboot:
+  #   modprobe: FATAL: Module tun not found in directory /lib/modules/<old>
+  warn "no module tree at /lib/modules/$kernel_release"
+  warn "the running kernel was replaced by an upgrade - reboot, then rerun this"
+  warn "until then no kernel module can load, so rootless podman has no network"
+elif [[ -f /lib/modules/$kernel_release/modules.builtin ]] &&
+  grep -q '/tun\.ko' "/lib/modules/$kernel_release/modules.builtin"; then
+  warn "tun is built into $kernel_release but /dev/net/tun is missing"
+  warn "check that udev/devtmpfs is populating /dev"
 elif ! command -v modprobe >/dev/null; then
   warn "no modprobe - cannot load the tun module for rootless networking"
 else
   ok "loading the tun module (rootless container networking needs it)"
-  run sudo modprobe tun || warn "modprobe tun failed - rootless networking will not work"
+  if run sudo modprobe tun; then
+    if ((DRY)) || [[ -e /dev/net/tun ]]; then
+      : # loaded, or not checkable under --dry-run
+    else
+      warn "modprobe tun succeeded but /dev/net/tun still missing"
+    fi
+  else
+    warn "modprobe tun failed - rootless container networking will not work"
+  fi
 fi
 
 # modprobe above does not survive a reboot.
