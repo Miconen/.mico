@@ -43,3 +43,8 @@ pacman-contrib
 # DOCKER_HOST and the docker->podman alias are set in home/common.nix.
 podman
 podman-compose
+
+# Rootless overlay on any filesystem. On btrfs the kernel refuses the native
+# overlay driver, and podman's btrfs driver is only an optdepend, so this is the
+# fallback scripts/podman-storage.sh reaches for. btrfs-progs is declared above.
+fuse-overlayfs
