@@ -729,7 +729,29 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 10. user services
+# 10. login manager
+#
+# sddm is pacman's, but the nix daemon's build users are ours, and they are the
+# reason the greeter needs configuring at all.
+# ---------------------------------------------------------------------------
+step "Login manager"
+
+sddm_conf_src="$REPO/config/sddm/10-hide-system-users.conf"
+sddm_conf_dst=/etc/sddm.conf.d/10-hide-system-users.conf
+if ! command -v sddm >/dev/null && [[ ! -d /usr/lib/sddm ]]; then
+  skip "sddm not installed"
+elif [[ ! -f $sddm_conf_src ]]; then
+  warn "missing $sddm_conf_src"
+elif [[ -f $sddm_conf_dst ]] && cmp -s "$sddm_conf_src" "$sddm_conf_dst"; then
+  skip "sddm already hides nologin accounts"
+else
+  # nix creates nixbld1..nixbld32; every one of them showed up on the greeter.
+  ok "hiding nologin accounts (nix build users) from the sddm greeter"
+  run sudo install -Dm644 "$sddm_conf_src" "$sddm_conf_dst"
+fi
+
+# ---------------------------------------------------------------------------
+# 11. user services
 # ---------------------------------------------------------------------------
 step "User services"
 
@@ -830,7 +852,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 11. root/system profile garbage collection
+# 12. root/system profile garbage collection
 #     home/nix-gc.nix only collects THIS user's profile. Root-owned system
 #     profile generations - created by nix upgrades and any root-level installs
 #     - accumulate unbounded and no user-level flake can reach them.

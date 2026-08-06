@@ -52,6 +52,11 @@ automatically:
   `config/containers/registries.conf` sets `docker.io` and
   `short-name-mode = "permissive"` so nothing prompts mid-build.
 
+The multi-user nix daemon creates `nixbld1..nixbld32` build users, and sddm
+listed every one of them on the greeter. `config/sddm/10-hide-system-users.conf`
+hides accounts by shell rather than by name, so it needs no updating if the
+build-user count changes.
+
 The maintenance timers are all off by default on Arch: `fstrim.timer` (SSD TRIM),
 `btrfs-scrub@-.timer` (monthly checksum scrub of `/` — btrfs stores checksums but
 never verifies them unless scrubbed), `smartd`, `paccache.timer`, and
