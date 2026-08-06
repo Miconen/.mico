@@ -659,36 +659,48 @@ fi
 # ---------------------------------------------------------------------------
 step "Podman"
 
-# Rootless networking (pasta, and slirp4netns) needs a tap device. Without the
-# tun module every container build dies at:
+# Rootless networking (pasta, and slirp4netns) needs a tap device. Without a
+# working tun driver every container build dies at:
 #   pasta failed ... Failed to open() /dev/net/tun: No such device
+#
+# Note that is ENODEV, not ENOENT: the node under /dev can exist while no driver
+# sits behind it, so testing for the file is not enough. Open it the way pasta
+# does instead - that is the only check that matches what actually fails.
 kernel_release="$(uname -r)"
-if [[ -e /dev/net/tun ]]; then
-  skip "/dev/net/tun present"
+
+tun_usable() {
+  [[ -c /dev/net/tun ]] || return 1
+  (exec 3<>/dev/net/tun) 2>/dev/null
+}
+
+if tun_usable; then
+  skip "/dev/net/tun opens (tun driver present)"
 elif [[ ! -d /lib/modules/$kernel_release ]]; then
   # `linux` is declared in packages/common.txt, so the pacman step above can
   # upgrade the kernel out from under the running one. pacman removes the old
   # module tree, and modprobe then fails for every module until a reboot:
   #   modprobe: FATAL: Module tun not found in directory /lib/modules/<old>
   warn "no module tree at /lib/modules/$kernel_release"
-  warn "the running kernel was replaced by an upgrade - reboot, then rerun this"
+  warn "the running kernel was replaced by an upgrade - REBOOT, then rerun this"
   warn "until then no kernel module can load, so rootless podman has no network"
-elif [[ -f /lib/modules/$kernel_release/modules.builtin ]] &&
-  grep -q '/tun\.ko' "/lib/modules/$kernel_release/modules.builtin"; then
-  warn "tun is built into $kernel_release but /dev/net/tun is missing"
-  warn "check that udev/devtmpfs is populating /dev"
 elif ! command -v modprobe >/dev/null; then
   warn "no modprobe - cannot load the tun module for rootless networking"
 else
-  ok "loading the tun module (rootless container networking needs it)"
-  if run sudo modprobe tun; then
-    if ((DRY)) || [[ -e /dev/net/tun ]]; then
-      : # loaded, or not checkable under --dry-run
-    else
-      warn "modprobe tun succeeded but /dev/net/tun still missing"
-    fi
+  if [[ -c /dev/net/tun ]]; then
+    ok "/dev/net/tun exists but does not open - loading the tun driver"
   else
-    warn "modprobe tun failed - rootless container networking will not work"
+    ok "loading the tun module (rootless container networking needs it)"
+  fi
+
+  if run sudo modprobe tun && { ((DRY)) || tun_usable; }; then
+    ((DRY)) || ok "/dev/net/tun opens now"
+  else
+    warn "tun still unusable - rootless container networking will not work"
+    warn "  uname -r:            $kernel_release"
+    warn "  module tree:         $(ls -d "/lib/modules/$kernel_release" 2>/dev/null || echo missing)"
+    warn "  tun.ko:              $(find "/lib/modules/$kernel_release" -name 'tun.ko*' -print -quit 2>/dev/null || echo 'not found')"
+    warn "  builtin:             $(grep -c '/tun\.ko' "/lib/modules/$kernel_release/modules.builtin" 2>/dev/null || echo 0)"
+    warn "if uname -r differs from the installed kernel, reboot to fix this"
   fi
 fi
 
