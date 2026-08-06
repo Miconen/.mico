@@ -42,6 +42,10 @@ diagnose=0
 conf_changed=0
 verify_output=""
 
+# $USER is not guaranteed to be set - home-manager activation and systemd units
+# both run without it, and `set -u` would abort on the bare variable.
+user_name="${USER:-$(id -un)}"
+
 for arg in "$@"; do
   case "$arg" in
   --dry-run) dry_run=1 ;;
@@ -141,6 +145,12 @@ if ((diagnose)); then
   for var in CONTAINERS_STORAGE_CONF CONTAINERS_CONF XDG_CONFIG_HOME XDG_DATA_HOME DOCKER_HOST; do
     printf '%s=%s\n' "$var" "${!var-<unset>}"
   done
+
+  printf '\n=== subuid/subgid (needed to own layer files) ===\n'
+  for f in /etc/subuid /etc/subgid; do
+    printf '%-12s %s\n' "$f" "$(grep "^${user_name}:" "$f" 2>/dev/null || echo "no entry for $user_name")"
+  done
+  printf 'newuidmap: %s\n' "$(command -v newuidmap || echo 'NOT INSTALLED')"
 
   printf '\n=== filesystems ===\n'
   printf 'HOME          %s -> %s\n' "$HOME" "$(fs_type "$HOME")"
@@ -301,6 +311,30 @@ existing_drivers() {
   done
 }
 
+# Delete the whole store.
+#
+# A plain `rm -rf` fails on every file inside a layer's diff/:
+#   rm: cannot remove '.../overlay/<layer>/diff/usr': Permission denied
+# Rootless podman maps container root and friends to subuids from /etc/subuid,
+# so those files are not owned by the invoking user and cannot be unlinked by
+# it. `podman unshare` enters that same user namespace, where they are owned by
+# root, which is the documented way to clean a rootless store.
+remove_store() {
+  if ((dry_run)); then
+    printf 'podman-storage: would run: podman unshare rm -rf %s\n' "$storage_root"
+    return 0
+  fi
+
+  if podman unshare rm -rf "$storage_root" 2>/dev/null && [[ ! -e $storage_root ]]; then
+    return 0
+  fi
+
+  # No usable user namespace (no /etc/subuid range, missing newuidmap): the
+  # store may still be plain user-owned, so a direct removal can work.
+  rm -rf "$storage_root" 2>/dev/null || true
+  [[ ! -e $storage_root ]]
+}
+
 # Remove the store when it holds state for a driver we are not about to use.
 clear_stale_store() {
   local expected="$1" found stale=()
@@ -326,8 +360,20 @@ clear_stale_store() {
   changed "local images and containers are dropped, they are rebuildable"
 
   stop_podman_units
-  act rm -rf "$storage_root"
-  conf_changed=1
+
+  if remove_store; then
+    conf_changed=1
+    return 0
+  fi
+
+  warn "could not fully remove $storage_root"
+  warn "rootless layers are owned by subuids, so this needs podman's user namespace:"
+  warn "    podman unshare rm -rf $storage_root"
+  if ! grep -q "^${user_name}:" /etc/subuid 2>/dev/null; then
+    warn "/etc/subuid has no range for $user_name, which is why the namespace is unavailable"
+    warn "fix with: sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 $user_name"
+  fi
+  exit 1
 }
 
 # ---------------------------------------------------------------------------
