@@ -658,11 +658,37 @@ step "User services"
 if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
   skip "systemd not running"
 else
-  if systemctl --user is-enabled podman.socket &>/dev/null; then
-    skip "podman.socket already enabled"
-  elif command -v podman >/dev/null; then
-    ok "enabling podman.socket (DOCKER_HOST points at it)"
-    run systemctl --user enable --now podman.socket || warn "could not enable podman.socket"
+  # Rootless podman on btrfs home cannot use the default overlay driver.
+  # storage.conf is also installed by home-manager (config/containers/storage.conf);
+  # bootstrap writes it early so the first podman run before/after hms is safe.
+  if command -v podman >/dev/null; then
+    podman_storage_conf="$HOME/.config/containers/storage.conf"
+    repo_storage_conf="$REPO/config/containers/storage.conf"
+    mkdir -p "$HOME/.config/containers"
+    if [[ -f $repo_storage_conf ]]; then
+      if [[ -f $podman_storage_conf ]] && cmp -s "$repo_storage_conf" "$podman_storage_conf"; then
+        skip "podman storage.conf already matches repo"
+      else
+        ok "installing rootless podman storage.conf (btrfs driver)"
+        run cp "$repo_storage_conf" "$podman_storage_conf"
+      fi
+    else
+      warn "missing $repo_storage_conf - skip podman storage.conf"
+    fi
+
+    # Half-created overlay store on btrfs is unusable once driver=btrfs is set.
+    overlay_root="$HOME/.local/share/containers/storage/overlay"
+    if [[ -d $overlay_root ]]; then
+      warn "found legacy overlay store at $overlay_root"
+      warn "run once: podman system reset   # drops local images/containers"
+    fi
+
+    if systemctl --user is-enabled podman.socket &>/dev/null; then
+      skip "podman.socket already enabled"
+    else
+      ok "enabling podman.socket (DOCKER_HOST points at it)"
+      run systemctl --user enable --now podman.socket || warn "could not enable podman.socket"
+    fi
   else
     skip "podman not installed"
   fi

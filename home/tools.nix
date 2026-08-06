@@ -123,5 +123,7 @@
   xdg.configFile = {
     "zellij/config.kdl".source = ../config/zellij/config.kdl;
     "zellij/layouts/default.kdl".source = ../config/zellij/layouts/default.kdl;
+    # Rootless podman on btrfs home — see config/containers/storage.conf.
+    "containers/storage.conf".source = ../config/containers/storage.conf;
   };
 }

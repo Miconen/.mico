@@ -29,7 +29,8 @@ machine you care about.
 
 It does: btrfs subvolume for `/nix` → install nix → `auto-optimise-store` →
 pacman sync → pacman.conf → build paru → AUR sync → `~/.gitconfig.local` → `home-manager switch` → remove pacman packages nix
-replaced → `podman.socket` → system maintenance timers → root-level GC timer.
+replaced → rootless podman `storage.conf` (btrfs driver) + `podman.socket` →
+system maintenance timers → root-level GC timer.
 
 The maintenance timers are all off by default on Arch: `fstrim.timer` (SSD TRIM),
 `btrfs-scrub@-.timer` (monthly checksum scrub of `/` — btrfs stores checksums but
