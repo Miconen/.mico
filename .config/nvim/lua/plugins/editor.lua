@@ -75,4 +75,43 @@ return {
 			},
 		},
 	},
+
+	-- Project-wide find and replace in a buffer. Driven by ripgrep, which is
+	-- already declared in home/common.nix (grug-far wants rg >= 14).
+	--
+	-- Binds live here rather than in keymaps/search.lua so the plugin loads on
+	-- first use; the <leader>s group label is registered there.
+	--
+	-- <leader>sr is taken by Snacks recent files, hence sR.
+	{
+		"MagicDuck/grug-far.nvim",
+		cmd = { "GrugFar", "GrugFarWithin" },
+		opts = {},
+		keys = {
+			{
+				"<leader>sR",
+				function()
+					require("grug-far").open()
+				end,
+				desc = "Search and replace",
+			},
+			{
+				"<leader>sR",
+				mode = "x",
+				function()
+					-- auto-detect: a linewise selection confines the replace to that
+					-- range, a charwise one pre-fills the search input with it.
+					require("grug-far").open({ visualSelectionUsage = "auto-detect" })
+				end,
+				desc = "Search and replace in selection",
+			},
+			{
+				"<leader>sW",
+				function()
+					require("grug-far").open({ prefills = { search = vim.fn.expand("<cword>") } })
+				end,
+				desc = "Search and replace word under cursor",
+			},
+		},
+	},
 }

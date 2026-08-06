@@ -18,6 +18,10 @@ local SKIP_FT = {
 	["dap-view-hover"] = true,
 	["dap-view-help"] = true,
 	["dap-repl"] = true,
+	-- grug-far draws its own header; a breadcrumb for its scratch buffer is noise
+	["grug-far"] = true,
+	["grug-far-history"] = true,
+	["grug-far-help"] = true,
 }
 
 local FOLDER = "󰉋 "
