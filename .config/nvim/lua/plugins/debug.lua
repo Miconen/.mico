@@ -18,7 +18,7 @@ local function dap_view_is_open()
 	return ok_state and ok_util and util.is_win_valid(state.winnr)
 end
 
-local DAP_VIEW_SECTIONS = { "scopes", "watches", "repl", "console", "sessions" }
+local DAP_VIEW_SECTIONS = { "scopes", "watches", "threads", "repl", "console", "sessions" }
 
 local function setup_dap_view_section_keys()
 	local dap = require("dap")
@@ -95,12 +95,11 @@ local function setup_js_ts_dap(dap)
 		return
 	end
 
-	-- Standard nvim-dap ${port} substitution. Both the connect host and the
-	-- server listen address must agree. Do not pre-bind a port yourself — that
-	-- races with the server process and yields "Couldn't connect to 127.0.0.1:PORT".
+	-- Prefer node + dapDebugServer.js (wiki). Mason bin wrapper is a fallback.
+	-- Do not pre-bind a port — races with the server and yields connect errors.
 	local cmd = "node"
 	local args = { js_debug, "${port}" }
-	if vim.fn.executable(js_debug_bin) == 1 then
+	if vim.fn.filereadable(js_debug) == 0 and vim.fn.executable(js_debug_bin) == 1 then
 		cmd = js_debug_bin
 		args = { "${port}" }
 	end
@@ -121,12 +120,29 @@ local function setup_js_ts_dap(dap)
 	dap.adapters["pwa-node"] = adapter
 	dap.adapters["pwa-chrome"] = vim.deepcopy(adapter)
 
+	-- js-debug is multi-session: parent + child. Scopes/variables live on the
+	-- child that actually stopped. Keep focus on the stopped leaf session.
+	local pwa_types = { ["pwa-node"] = true, ["pwa-chrome"] = true, ["node"] = true, ["chrome"] = true }
+	dap.listeners.after.event_stopped["mico_pwa_focus_leaf"] = function(session)
+		if not session or not pwa_types[session.config.type] then
+			return
+		end
+		if session.children and next(session.children) then
+			return
+		end
+		if dap.session() ~= session then
+			dap.set_session(session)
+		end
+	end
+
 	local skip_files = {
 		"<node_internals>/**",
 		"${workspaceFolder}/node_modules/**",
 		"**/node_modules/**",
 	}
 
+	-- Shared source-map settings. Do NOT set outFiles on tsx launches: tsx runs
+	-- .ts in-process; pointing the adapter at emitted .js breaks BP binding.
 	local ts_maps = {
 		sourceMaps = true,
 		resolveSourceMapLocations = {
@@ -134,7 +150,15 @@ local function setup_js_ts_dap(dap)
 			"!**/node_modules/**",
 		},
 		skipFiles = skip_files,
+		smartStep = true,
 	}
+
+	local node_maps = vim.tbl_deep_extend("force", {}, ts_maps, {
+		outFiles = {
+			"${workspaceFolder}/**/*.(m|c|)js",
+			"!**/node_modules/**",
+		},
+	})
 
 	local function assert_local_tsx()
 		local root = vim.fn.getcwd()
@@ -151,14 +175,22 @@ local function setup_js_ts_dap(dap)
 	dap.listeners.on_config = dap.listeners.on_config or {}
 	dap.listeners.on_config["mico_tsx_check"] = function(config)
 		if config.mico_require_tsx and not assert_local_tsx() then
-			return config
+			return dap.ABORT
 		end
 		config = vim.deepcopy(config)
 		config.mico_require_tsx = nil
 		return config
 	end
 
-	dap.listeners.after.event_stopped["mico_open_dap_view"] = function()
+	-- Open panel once frames/scopes exist (after.scopes). event_stopped races —
+	-- current_frame is often still nil → empty scopes that stick.
+	dap.listeners.after.scopes["mico_open_dap_view"] = function(session)
+		if not session or not session.stopped_thread_id or dap.session() ~= session then
+			return
+		end
+		if dap_view_is_open() then
+			return
+		end
 		local ok, view = pcall(require, "dap-view")
 		if ok then
 			view.open()
@@ -166,13 +198,13 @@ local function setup_js_ts_dap(dap)
 		end
 	end
 
-	local function launch(cfg)
+	local function launch(cfg, maps)
 		return vim.tbl_deep_extend("force", {
 			type = "pwa-node",
 			request = "launch",
 			cwd = "${workspaceFolder}",
 			console = "integratedTerminal",
-		}, ts_maps, cfg)
+		}, maps or node_maps, cfg)
 	end
 
 	local function attach(cfg)
@@ -180,18 +212,23 @@ local function setup_js_ts_dap(dap)
 			type = "pwa-node",
 			request = "attach",
 			cwd = "${workspaceFolder}",
-		}, ts_maps, cfg)
+		}, node_maps, cfg)
 	end
 
 	-- node --import tsx <program>: one process; js-debug injects inspect-brk.
 	-- node resolves the `tsx` package from cwd/node_modules.
 	local function launch_tsx(cfg)
-		return launch(vim.tbl_deep_extend("force", {
-			mico_require_tsx = true,
-			runtimeExecutable = "node",
-			runtimeArgs = { "--import", "tsx" },
-			autoAttachChildProcesses = false,
-		}, cfg))
+		return launch(
+			vim.tbl_deep_extend("force", {
+				mico_require_tsx = true,
+				runtimeExecutable = "node",
+				runtimeArgs = { "--import", "tsx" },
+				autoAttachChildProcesses = false,
+				-- Wait for tsx/esbuild inline maps so Locals bind to .ts frames.
+				pauseForSourceMap = true,
+			}, cfg),
+			ts_maps
+		)
 	end
 
 	local js_ts = {
@@ -248,6 +285,19 @@ local function setup_js_ts_dap(dap)
 	for _, language in ipairs({ "typescript", "javascript", "typescriptreact", "javascriptreact" }) do
 		dap.configurations[language] = js_ts
 	end
+end
+
+local function dap_view_toggle_or_start()
+	local dap = require("dap")
+	local view = require("dap-view")
+	if not dap.session() then
+		-- Same entry as <leader>dc: prompt for a config, then show the panel.
+		dap.continue()
+		view.open()
+		view.show_view("scopes")
+		return
+	end
+	view.toggle()
 end
 
 return {
@@ -372,23 +422,24 @@ return {
 			{
 				"<leader>dv",
 				function()
-					require("dap-view").toggle()
+					dap_view_toggle_or_start()
 				end,
-				desc = "Toggle DAP view",
+				desc = "Toggle DAP view / start session",
 			},
 		},
 		opts = {
 			winbar = {
 				show = true,
 				show_keymap_hints = true,
-				sections = { "scopes", "watches", "repl", "console", "sessions" },
+				sections = { "scopes", "watches", "threads", "repl", "console", "sessions" },
 				default_section = "scopes",
 				base_sections = {
 					scopes = { label = "Scopes", keymap = "1" },
 					watches = { label = "Watches", keymap = "2" },
-					repl = { label = "REPL", keymap = "3" },
-					console = { label = "Console", keymap = "4" },
-					sessions = { label = "Sessions", keymap = "5" },
+					threads = { label = "Threads", keymap = "3" },
+					repl = { label = "REPL", keymap = "4" },
+					console = { label = "Console", keymap = "5" },
+					sessions = { label = "Sessions", keymap = "6" },
 				},
 			},
 			windows = {
