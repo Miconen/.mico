@@ -239,42 +239,54 @@ fi
 # ---------------------------------------------------------------------------
 # Existing store
 #
-# podman names its graph dirs after the driver (overlay-layers, btrfs-layers).
-# A store built with the wrong one is not migrated, it just keeps erroring, so
-# it has to go.
+# containers/storage picks the driver whose directory already exists in the
+# graphroot, in preference to the one in storage.conf - it will not orphan an
+# existing store. So a leftover overlay/ dir silently defeats driver = "btrfs".
+#
+# The layout is version dependent: podman <= 5 created <driver>-layers and
+# <driver>-images alongside <driver>/, podman 6 keeps one db.sql plus <driver>/.
+# Matching only on *-layers therefore misses modern stores completely.
 # ---------------------------------------------------------------------------
-existing_driver() {
-  local dir base
-  for dir in "$storage_root"/*-layers; do
-    [[ -e $dir ]] || continue
-    base="$(basename "$dir")"
-    printf '%s\n' "${base%-layers}"
-    return 0
+KNOWN_DRIVERS=(overlay overlay2 btrfs vfs zfs aufs devicemapper)
+
+# Every driver with state in the graphroot, one per line.
+existing_drivers() {
+  local d
+  for d in "${KNOWN_DRIVERS[@]}"; do
+    if [[ -d $storage_root/$d || -d $storage_root/$d-layers || -d $storage_root/$d-images ]]; then
+      printf '%s\n' "$d"
+    fi
   done
-  return 1
 }
 
-if existing="$(existing_driver)"; then
-  if [[ $existing == "$want" ]]; then
-    say "existing store already uses the $existing driver"
+stale_drivers=()
+while IFS= read -r found; do
+  [[ -n $found ]] || continue
+  if [[ $found == "$want" ]]; then
+    say "existing store already has a $found dir"
   else
-    # Guard the rm: only ever inside the containers storage dir.
-    case "$storage_root" in
-    */containers/storage) ;;
-    *)
-      warn "refusing to remove unexpected storage path $storage_root"
-      exit 1
-      ;;
-    esac
-
-    changed "removing $existing store at $storage_root (incompatible with $want)"
-    changed "local images and containers are dropped - they are rebuildable"
-
-    stop_podman_units
-    act rm -rf "$storage_root"
-    conf_changed=1
+    stale_drivers+=("$found")
   fi
-else
+done < <(existing_drivers)
+
+if ((${#stale_drivers[@]})); then
+  # Guard the rm: only ever inside the containers storage dir.
+  case "$storage_root" in
+  */containers/storage) ;;
+  *)
+    warn "refusing to remove unexpected storage path $storage_root"
+    exit 1
+    ;;
+  esac
+
+  changed "found ${stale_drivers[*]} state in $storage_root, but $want is required"
+  changed "removing the store - podman would keep using ${stale_drivers[0]} otherwise"
+  changed "local images and containers are dropped, they are rebuildable"
+
+  stop_podman_units
+  act rm -rf "$storage_root"
+  conf_changed=1
+elif ((${#stale_drivers[@]} == 0)) && [[ -z $(existing_drivers) ]]; then
   say "no store initialized yet, podman will create a $want one"
 fi
 
