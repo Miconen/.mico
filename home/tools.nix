@@ -1,5 +1,6 @@
 {
   lib,
+  config,
   ...
 }:
 {
@@ -126,4 +127,26 @@
     # Rootless podman on btrfs home — see config/containers/storage.conf.
     "containers/storage.conf".source = ../config/containers/storage.conf;
   };
+
+  # storage.conf alone is not enough if a previous run already created an
+  # overlay store: podman keeps targeting .../storage/overlay and errors.
+  # Drop that incompatible store once so the btrfs driver can initialize.
+  home.activation.podmanBtrfsStorage = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    store="${config.home.homeDirectory}/.local/share/containers/storage"
+    conf="${config.home.homeDirectory}/.config/containers/storage.conf"
+    if [ ! -f "$conf" ] || ! grep -q 'driver = "btrfs"' "$conf"; then
+      warnEcho "podman storage.conf missing btrfs driver at $conf (hms incomplete?)"
+    fi
+    if [ -d "$store/overlay" ] || [ -d "$store/overlay-images" ] || [ -d "$store/overlay-layers" ]; then
+      noteEcho "removing leftover podman overlay store (incompatible with btrfs driver)"
+      # Stop rootless API so it does not hold files open.
+      if command -v systemctl >/dev/null; then
+        $DRY_RUN_CMD systemctl --user stop podman.socket podman.service 2>/dev/null || true
+      fi
+      $DRY_RUN_CMD rm -rf "$store"
+      if command -v systemctl >/dev/null; then
+        $DRY_RUN_CMD systemctl --user start podman.socket 2>/dev/null || true
+      fi
+    fi
+  '';
 }

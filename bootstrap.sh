@@ -677,10 +677,14 @@ else
     fi
 
     # Half-created overlay store on btrfs is unusable once driver=btrfs is set.
-    overlay_root="$HOME/.local/share/containers/storage/overlay"
-    if [[ -d $overlay_root ]]; then
-      warn "found legacy overlay store at $overlay_root"
-      warn "run once: podman system reset   # drops local images/containers"
+    # Wipe it automatically so the next podman run can init a btrfs store.
+    store_root="$HOME/.local/share/containers/storage"
+    if [[ -d $store_root/overlay || -d $store_root/overlay-images || -d $store_root/overlay-layers ]]; then
+      ok "removing leftover podman overlay store (incompatible with btrfs driver)"
+      if command -v systemctl >/dev/null; then
+        run systemctl --user stop podman.socket podman.service 2>/dev/null || true
+      fi
+      run rm -rf "$store_root"
     fi
 
     if systemctl --user is-enabled podman.socket &>/dev/null; then
@@ -688,6 +692,10 @@ else
     else
       ok "enabling podman.socket (DOCKER_HOST points at it)"
       run systemctl --user enable --now podman.socket || warn "could not enable podman.socket"
+    fi
+    # Restart if it was already up so it reloads storage.conf.
+    if systemctl --user is-active podman.socket &>/dev/null; then
+      run systemctl --user restart podman.socket || true
     fi
   else
     skip "podman not installed"
