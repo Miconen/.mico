@@ -17,19 +17,23 @@
 #
 # Idempotent. Safe to run from bootstrap.sh and from home-manager activation.
 #
-#   --dry-run   print what would change, touch nothing
-#   --quiet     only print on change or error
+#   --dry-run    print what would change, touch nothing
+#   --quiet      only print on change or error
+#   --diagnose   dump the state podman actually sees, change nothing
 set -euo pipefail
 
 MARKER='# managed by .mico (scripts/podman-storage.sh) - edits are overwritten'
 
 dry_run=0
 quiet=0
+diagnose=0
+conf_changed=0
 
 for arg in "$@"; do
   case "$arg" in
   --dry-run) dry_run=1 ;;
   --quiet) quiet=1 ;;
+  --diagnose) diagnose=1 ;;
   *)
     printf 'podman-storage: unknown argument %s\n' "$arg" >&2
     exit 2
@@ -37,9 +41,10 @@ for arg in "$@"; do
   esac
 done
 
-# Overridable for testing.
-storage_root="${PODMAN_STORAGE_ROOT:-$HOME/.local/share/containers/storage}"
-storage_conf="${PODMAN_STORAGE_CONF:-$HOME/.config/containers/storage.conf}"
+# Overridable for testing. Podman resolves these through XDG, so honour it here
+# too - hardcoding ~/.config would write a file podman never reads.
+storage_root="${PODMAN_STORAGE_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/containers/storage}"
+storage_conf="${PODMAN_STORAGE_CONF:-${XDG_CONFIG_HOME:-$HOME/.config}/containers/storage.conf}"
 
 say() {
   ((quiet)) || printf 'podman-storage: %s\n' "$1"
@@ -61,7 +66,22 @@ act() {
   "$@"
 }
 
-if ! command -v podman >/dev/null; then
+have_systemd() {
+  command -v systemctl >/dev/null && [[ -d /run/systemd/system ]]
+}
+
+stop_podman_units() {
+  have_systemd || return 0
+  act systemctl --user stop podman.socket podman.service 2>/dev/null || true
+}
+
+start_podman_socket() {
+  have_systemd || return 0
+  systemctl --user is-enabled podman.socket &>/dev/null || return 0
+  act systemctl --user start podman.socket 2>/dev/null || true
+}
+
+if ! command -v podman >/dev/null && ((diagnose == 0)); then
   say "podman not installed, nothing to do"
   exit 0
 fi
@@ -79,6 +99,73 @@ fs_type() {
   # Busybox-free fallback; prints e.g. "btrfs" or "ext2/ext3".
   stat -f -c %T "$path" 2>/dev/null || true
 }
+
+# ---------------------------------------------------------------------------
+# --diagnose: print what podman actually sees and stop.
+#
+# The failure mode this exists for: a storage.conf that is present but not the
+# one podman reads (wrong path, dangling symlink, overridden by an env var), or
+# a stale podman.service still holding the previous config.
+# ---------------------------------------------------------------------------
+if ((diagnose)); then
+  dump_file() {
+    local path="$1"
+    printf '\n--- %s\n' "$path"
+    if [[ -L $path ]]; then
+      printf 'symlink -> %s\n' "$(readlink "$path")"
+      [[ -e $path ]] || printf 'TARGET IS MISSING (dangling)\n'
+    fi
+    if [[ -e $path ]]; then
+      sed 's/^/    /' "$path" 2>/dev/null || printf 'unreadable\n'
+    elif [[ ! -L $path ]]; then
+      printf 'absent\n'
+    fi
+  }
+
+  printf '=== podman ===\n'
+  printf 'binary: %s\n' "$(command -v podman || echo 'NOT INSTALLED')"
+  podman --version 2>/dev/null || true
+
+  printf '\n=== env ===\n'
+  for var in CONTAINERS_STORAGE_CONF CONTAINERS_CONF XDG_CONFIG_HOME XDG_DATA_HOME DOCKER_HOST; do
+    printf '%s=%s\n' "$var" "${!var-<unset>}"
+  done
+
+  printf '\n=== filesystems ===\n'
+  printf 'HOME          %s -> %s\n' "$HOME" "$(fs_type "$HOME")"
+  printf 'storage root  %s -> %s\n' "$storage_root" "$(fs_type "$storage_root")"
+
+  printf '\n=== storage.conf candidates (first readable wins) ===\n'
+  [[ -n ${CONTAINERS_STORAGE_CONF-} ]] && dump_file "$CONTAINERS_STORAGE_CONF"
+  dump_file "$storage_conf"
+  dump_file /etc/containers/storage.conf
+  dump_file /usr/share/containers/storage.conf
+
+  printf '\n=== store contents ===\n'
+  if [[ -d $storage_root ]]; then
+    ls -la "$storage_root" 2>/dev/null || true
+  else
+    printf '%s does not exist\n' "$storage_root"
+  fi
+
+  printf '\n=== systemd --user ===\n'
+  if have_systemd; then
+    for unit in podman.socket podman.service; do
+      printf '%-16s enabled=%s active=%s\n' "$unit" \
+        "$(systemctl --user is-enabled "$unit" 2>&1 || true)" \
+        "$(systemctl --user is-active "$unit" 2>&1 || true)"
+    done
+  else
+    printf 'no systemd\n'
+  fi
+
+  printf '\n=== podman info ===\n'
+  podman info --format \
+    'driver={{.Store.GraphDriverName}} root={{.Store.GraphRoot}} conf={{.Store.ConfigFile}}' \
+    2>&1 || true
+  printf '\n'
+  exit 0
+fi
 
 fs="$(fs_type "$storage_root")"
 if [[ -z $fs ]]; then
@@ -102,9 +189,26 @@ conf_is_ours() {
   [[ -f $storage_conf ]] && grep -qF "$MARKER" "$storage_conf"
 }
 
-if [[ -f $storage_conf ]] && ! conf_is_ours; then
+# A symlink at this path is never hand-written - home-manager put it there.
+# Earlier versions of this repo managed storage.conf as an xdg.configFile, which
+# points into /nix/store; once that generation is garbage collected the link
+# dangles, podman silently falls back to /etc (overlay), and writing through the
+# link would try to create a file inside the read-only store. Clear it first.
+if [[ -L $storage_conf ]]; then
+  link_target="$(readlink "$storage_conf" 2>/dev/null || true)"
+  if [[ -e $storage_conf ]]; then
+    changed "replacing home-manager symlink $storage_conf -> $link_target"
+  else
+    changed "removing dangling symlink $storage_conf -> ${link_target:-?}"
+  fi
+  act rm -f "$storage_conf"
+  conf_changed=1
+fi
+
+if [[ -e $storage_conf ]] && ! conf_is_ours; then
   # A hand-written or distro-provided config outranks us.
   warn "$storage_conf exists and is not managed here, not touching it"
+  warn "it must set driver = \"$want\" for this filesystem, or podman will fail"
 elif [[ $want == "btrfs" ]]; then
   if conf_is_ours && grep -q 'driver = "btrfs"' "$storage_conf"; then
     say "storage.conf already selects the btrfs driver"
@@ -123,11 +227,13 @@ $MARKER
 driver = "btrfs"
 EOF
     fi
+    conf_changed=1
   fi
 elif conf_is_ours; then
   # Filesystem changed under us (restore onto ext4, new machine, ...).
   changed "removing $storage_conf, $fs does not need a driver override"
   act rm -f "$storage_conf"
+  conf_changed=1
 fi
 
 # ---------------------------------------------------------------------------
@@ -164,20 +270,20 @@ if existing="$(existing_driver)"; then
     changed "removing $existing store at $storage_root (incompatible with $want)"
     changed "local images and containers are dropped - they are rebuildable"
 
-    if command -v systemctl >/dev/null && [[ -d /run/systemd/system ]]; then
-      act systemctl --user stop podman.socket podman.service 2>/dev/null || true
-    fi
-
+    stop_podman_units
     act rm -rf "$storage_root"
-
-    if command -v systemctl >/dev/null && [[ -d /run/systemd/system ]]; then
-      if systemctl --user is-enabled podman.socket &>/dev/null; then
-        act systemctl --user start podman.socket 2>/dev/null || true
-      fi
-    fi
+    conf_changed=1
   fi
 else
   say "no store initialized yet, podman will create a $want one"
+fi
+
+# A running podman.service loaded the old storage config at start and keeps
+# using it, so anything talking to DOCKER_HOST keeps seeing the old error even
+# after the config is fixed. Bounce it whenever we changed something.
+if ((conf_changed)); then
+  stop_podman_units
+  start_podman_socket
 fi
 
 # ---------------------------------------------------------------------------
@@ -189,7 +295,7 @@ fi
 
 got="$(podman info --format '{{.Store.GraphDriverName}}' 2>/dev/null || true)"
 if [[ -z $got ]]; then
-  warn "podman info failed - run 'podman info' to see the error"
+  warn "podman info failed - run '$0 --diagnose' to dump the relevant state"
   exit 0
 fi
 
@@ -197,5 +303,5 @@ if [[ $got == "$want" ]]; then
   say "podman reports the $got driver"
 else
   warn "podman reports '$got' but '$want' was expected"
-  warn "inspect $storage_conf and $storage_root"
+  warn "run '$0 --diagnose' to see which config podman is actually reading"
 fi
