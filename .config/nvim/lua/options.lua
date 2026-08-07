@@ -13,7 +13,7 @@ vim.opt.showmode = false
 vim.opt.showtabline = 0
 vim.opt.laststatus = 3 -- global statusline
 vim.opt.fillchars = { eob = " " } -- hide ~ on empty lines
-vim.opt.colorcolumn = "80"
+vim.opt.colorcolumn = "0" -- no ruler; formatters own line length
 
 -- Editing
 vim.opt.expandtab = true

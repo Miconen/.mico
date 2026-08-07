@@ -24,6 +24,24 @@ Snacks.toggle.treesitter():map("<leader>uT")
 Snacks.toggle.inlay_hints():map("<leader>uh")
 Snacks.toggle.dim():map("<leader>uz")
 
+-- Only meaningful in markdown buffers; harmless elsewhere. render-markdown is
+-- lazy-loaded on the markdown filetype, hence the require inside the callback.
+Snacks.toggle
+	.new({
+		name = "Markdown render",
+		get = function()
+			local ok, rm = pcall(require, "render-markdown")
+			return ok and rm.get() or false
+		end,
+		set = function()
+			local ok, rm = pcall(require, "render-markdown")
+			if ok then
+				rm.toggle()
+			end
+		end,
+	})
+	:map("<leader>um")
+
 map("n", "<leader>un", function()
 	Snacks.notifier.show_history()
 end, { desc = "Notification history" })
