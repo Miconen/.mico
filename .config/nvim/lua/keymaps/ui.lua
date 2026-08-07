@@ -24,23 +24,49 @@ Snacks.toggle.treesitter():map("<leader>uT")
 Snacks.toggle.inlay_hints():map("<leader>uh")
 Snacks.toggle.dim():map("<leader>uz")
 
--- Only meaningful in markdown buffers; harmless elsewhere. render-markdown is
--- lazy-loaded on the markdown filetype, hence the require inside the callback.
+-- render-markdown and csvview are both lazy-loaded, so their state getters must
+-- not require them. Snacks' which-key integration calls get() when the <leader>u
+-- menu is drawn, and a require there would load the plugin just for browsing the
+-- menu. package.loaded is the honest answer: not loaded means not rendering.
+--
+-- set() takes the state Snacks computed rather than calling the plugin's own
+-- toggle(), so the two cannot disagree about which way to flip.
 Snacks.toggle
 	.new({
 		name = "Markdown render",
 		get = function()
-			local ok, rm = pcall(require, "render-markdown")
-			return ok and rm.get() or false
+			local rm = package.loaded["render-markdown"]
+			return rm ~= nil and rm.get()
 		end,
-		set = function()
-			local ok, rm = pcall(require, "render-markdown")
-			if ok then
-				rm.toggle()
+		set = function(state)
+			local rm = require("render-markdown")
+			if state then
+				rm.enable()
+			else
+				rm.disable()
 			end
 		end,
 	})
 	:map("<leader>um")
+
+Snacks.toggle
+	.new({
+		name = "CSV view",
+		get = function()
+			local cv = package.loaded["csvview"]
+			-- 0 resolves to the current buffer; the view is per buffer.
+			return cv ~= nil and cv.is_enabled(0)
+		end,
+		set = function(state)
+			local cv = require("csvview")
+			if state then
+				cv.enable(0)
+			else
+				cv.disable(0)
+			end
+		end,
+	})
+	:map("<leader>uC")
 
 map("n", "<leader>un", function()
 	Snacks.notifier.show_history()

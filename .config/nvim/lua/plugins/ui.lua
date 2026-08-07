@@ -98,8 +98,8 @@ return {
 	},
 
 	-- Aligned columns for CSV/TSV, with field text objects and Excel-like
-	-- movement. Opt-in per buffer via :CsvViewToggle rather than on every
-	-- comma-separated file.
+	-- movement. Opt-in per buffer rather than on every comma-separated file:
+	-- <leader>uC in keymaps/ui.lua, or :CsvViewToggle.
 	{
 		"hat0uma/csvview.nvim",
 		cmd = { "CsvViewEnable", "CsvViewDisable", "CsvViewToggle" },
