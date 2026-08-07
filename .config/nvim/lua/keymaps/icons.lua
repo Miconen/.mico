@@ -21,6 +21,7 @@ return {
 	MacroRecording = "",
 	Notes = "󰅌",
 	Package = "󰏖",
+	Rest = "󰖟",
 	Search = "",
 	Test = "󰙨",
 	UI = "󰙵",

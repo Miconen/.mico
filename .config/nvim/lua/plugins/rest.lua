@@ -10,16 +10,32 @@
 --
 -- Needs Neovim >= 0.12; this config already targets 0.13.
 --
--- kulala sets its own buffer-local keymaps in .http files by default
--- (kulala_keymaps = true, with an empty prefix), so `e` selects the environment,
--- `s`/<CR> send, `a` sends all, `n`/`p` jump between requests and `q` closes the
--- result window. The <C-*> binds below therefore duplicate some of those; they
--- are kept because they are what the nvim-2025 develop config used.
+-- Two separate keymap sets exist in kulala, which are easy to confuse:
+--
+--   * kulala_keymaps (on by default, empty prefix) binds H/B/A/V, <c-h>/<c-l>
+--     and friends inside kulala's own result window - NOT in .http buffers.
+--   * global_keymaps (off by default) is the request actions: send, replay,
+--     inspect, select environment, jump between requests. Enabled below under
+--     <leader>R, the group label being in keymaps/rest.lua.
+--
+-- Most of the global set is filetype-scoped to http/rest by kulala itself, so
+-- those appear only in .http buffers even though they are called "global".
 return {
 	{
 		"mistweaverco/kulala.nvim",
 		ft = { "http" },
 		keys = {
+			-- kulala creates its global_keymaps when it loads, and this spec only
+			-- loads on the http filetype. These five are the ones kulala does not
+			-- filetype-scope, so without a trigger they would not exist until an
+			-- .http buffer had been opened. No rhs: lazy loads the plugin and then
+			-- replays the key onto kulala's own mapping.
+			{ "<leader>Rb", desc = "Open scratchpad" },
+			{ "<leader>Ro", desc = "Open kulala" },
+			{ "<leader>Rs", desc = "Send request" },
+			{ "<leader>Ra", desc = "Send all requests" },
+			{ "<leader>Rr", desc = "Replay last request" },
+
 			{
 				"<C-y>",
 				function()
@@ -46,6 +62,10 @@ return {
 			},
 		},
 		opts = {
+			-- Request actions under <leader>R: Rs send, Ra send all, Rr replay,
+			-- Re select environment, Ri inspect, Rb scratchpad, Ro open, Rf find.
+			global_keymaps = true,
+
 			-- Which block of http-client.env.json supplies {{variables}}.
 			--
 			-- Resolution order in kulala is vim.g.kulala_selected_env, then the
