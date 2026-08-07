@@ -9,6 +9,12 @@
 -- deliberately not added to the list in plugins/treesitter.lua.
 --
 -- Needs Neovim >= 0.12; this config already targets 0.13.
+--
+-- kulala sets its own buffer-local keymaps in .http files by default
+-- (kulala_keymaps = true, with an empty prefix), so `e` selects the environment,
+-- `s`/<CR> send, `a` sends all, `n`/`p` jump between requests and `q` closes the
+-- result window. The <C-*> binds below therefore duplicate some of those; they
+-- are kept because they are what the nvim-2025 develop config used.
 return {
 	{
 		"mistweaverco/kulala.nvim",
@@ -40,6 +46,21 @@ return {
 			},
 		},
 		opts = {
+			-- Which block of http-client.env.json supplies {{variables}}.
+			--
+			-- Resolution order in kulala is vim.g.kulala_selected_env, then the
+			-- env picked at runtime (persisted in kulala's own settings file),
+			-- then this, then the literal string "default".
+			--
+			-- Note this is NOT read from a .kulala.json in the project - kulala has
+			-- no such file, so a default_env set there is silently ignored and every
+			-- {{var}} stays unexpanded. Declaring it here keeps it in git instead of
+			-- in kulala's stateful settings file.
+			--
+			-- Projects whose env file has no "dev" block still need `e` in the
+			-- buffer to pick one.
+			default_env = "dev",
+
 			contenttypes = {
 				["application/problem%+json"] = "application/json",
 			},
