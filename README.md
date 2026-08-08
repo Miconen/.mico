@@ -81,6 +81,11 @@ still present:
 ~/.mico/bootstrap.sh --check
 ```
 
+On WSL, clipboard integration does not need pacman's `xclip`: the managed
+`pbcopy`/`pbpaste` wrappers use WSLg's Wayland clipboard, then fall back to
+Windows `clip.exe` and PowerShell. `xdg-utils` is only declared for the Arch
+desktop, where browser/file MIME launching is meaningful.
+
 ### WSL first
 
 `/etc/wsl.conf` on the Windows side, then `wsl --shutdown`:

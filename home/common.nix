@@ -62,6 +62,7 @@
 
       # git / dev
       gh
+      opencode
       lazygit
       lazydocker
       # Routes staged changes into the right commit of a stack automatically.
