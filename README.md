@@ -63,10 +63,12 @@ never verifies them unless scrubbed), `smartd`, `paccache.timer`, and
 `reflector.timer`.
 
 AUR packages are separate because `pacman -S` cannot install them. paru itself is
-AUR-only, so it is not installable by an AUR helper or by pacman — bootstrap
-builds `paru-bin` with `makepkg` once, then uses paru for the rest.
-`paru-bin` rather than `paru` avoids dragging a Rust toolchain onto every
-machine.
+AUR-only, so bootstrap builds `paru-bin` with `makepkg` only when no `paru`
+provider already exists, then uses the existing helper for the rest. The helper
+is infrastructure rather than an `aur-common.txt` entry, so a source-built
+`paru` does not conflict with `paru-bin`. AUR builds run with system toolchains;
+WSL declares pacman's Go specifically because Arch's patched Go stdlib cannot be
+mixed with mise's upstream compiler.
 
 `--check` audits pacman against `packages/*.txt` and exits 1 on drift. Run it when
 you suspect you `pacman -S`’d something and forgot. It reports four states:

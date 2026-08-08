@@ -10,6 +10,10 @@ vulkan-dzn
 vulkan-icd-loader
 mesa
 
+# AUR build dependency. Keep makepkg on Arch's patched Go toolchain; mise's
+# upstream Go carries a different build suffix and cannot compile Arch's stdlib.
+go
+
 # Was in the previous WSL manifest; drop it if you no longer need a local
 # database server.
 postgresql

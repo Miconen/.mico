@@ -152,6 +152,10 @@ if ((CHECK_ONLY)); then
       # count as declared or they would be reported as drift forever.
       read_list "$REPO/packages/aur-common.txt"
       read_list "$REPO/packages/aur-$HOST.txt"
+      # paru/paru-bin is bootstrapped as infrastructure rather than declared in
+      # aur-common.txt. Treat whichever provider is installed as managed.
+      command -v paru >/dev/null && pacman -Qq paru 2>/dev/null || true
+      command -v paru >/dev/null && pacman -Qq paru-bin 2>/dev/null || true
     } | sort -u
   )
   mapfile -t migrated < <(read_list "$REPO/packages/migrated.txt" | sort -u)
@@ -513,8 +517,8 @@ else
     # "compgen: command not found" inside the fakeroot environment if a nix bash
     # shadows /usr/bin/bash.
     #
-    # Prepending rather than replacing, so anything else makepkg needs is still
-    # reachable further down PATH.
+    # Prepending rather than replacing keeps other tools reachable. Go-specific
+    # variables are cleared so makepkg uses /usr/bin/go and its matching stdlib.
     #
     # Build and install are separate steps on purpose. `makepkg -si` installs
     # every artifact it produced, and Arch's default OPTIONS=(debug) also emits a
@@ -524,7 +528,9 @@ else
     if git clone --depth 1 "https://aur.archlinux.org/${AUR_HELPER_PKG}.git" "$aur_tmp/$AUR_HELPER_PKG" \
       && (
         cd "$aur_tmp/$AUR_HELPER_PKG" || exit 1
-        PATH="/usr/bin:/usr/local/bin:$PATH" makepkg -s --noconfirm || exit 1
+        env -u GOROOT -u GOPATH -u GOENV \
+          PATH="/usr/bin:/usr/local/bin:$PATH" \
+          makepkg -s --noconfirm || exit 1
         mapfile -t built < <(
           find . -maxdepth 1 -name '*.pkg.tar.*' ! -name '*-debug-*' ! -name '*.sig' -print
         )
@@ -576,8 +582,11 @@ else
     warn "paru unavailable, skipping: ${aur_missing[*]}"
   else
     ok "installing ${#aur_missing[@]} from the AUR: ${aur_missing[*]}"
-    # paru shells out to makepkg, so it needs the same system-bash-first PATH.
-    run env PATH="/usr/bin:/usr/local/bin:$PATH" \
+    # paru shells out to makepkg, so use system bash/toolchains and remove Go
+    # environment inherited from mise. Arch's Go stdlib has a distro build suffix
+    # and cannot be mixed with the upstream compiler mise installs.
+    run env -u GOROOT -u GOPATH -u GOENV \
+      PATH="/usr/bin:/usr/local/bin:$PATH" \
       paru -S --needed --noconfirm -- "${aur_missing[@]}" \
       || warn "some AUR packages failed"
   fi

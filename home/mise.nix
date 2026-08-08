@@ -27,7 +27,7 @@
     globalConfig = {
       tools = {
         node = "24";
-        python = "3.14";
+        python = "3.13";
         go = "1.26";
         rust = "1.97";
       };
