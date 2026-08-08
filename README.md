@@ -320,13 +320,18 @@ public keys, so committing them is fine.
 GUI is `127.0.0.1:8384`, localhost only, so no password is needed - which also
 means no secret ever has to live in this public repo.
 
-### Status: Phase 2 done
+### Status: desktop added
 
-| phase | what |
-| --- | --- |
-| 1 done | service only |
-| 2 done | phone paired; `documents` -> `~/Documents`, `shared` -> `~/Sync`, both bidirectional with 30-day trashcan |
-| 3 | add the desktop; `phone-camera`, bidirectional with trashcan |
+| folder ID | laptop | Windows | phone | mode/versioning |
+| --- | --- | --- | --- | --- |
+| `documents` | `~/Documents` | `D:\Documents` | accepted path | bidirectional, 30-day trashcan |
+| `shared` | `~/Sync` | `D:\Sync` | accepted path | bidirectional, 30-day trashcan |
+| `phone-dcim` | not shared | `D:\Pictures\Phone\DCIM` | `DCIM` | Windows <-> phone, bidirectional, 30-day trashcan |
+| `phone-pictures` | not shared | `D:\Pictures\Phone\Pictures` | `Pictures` | Windows <-> phone, bidirectional, 30-day trashcan |
+
+Windows and Android are configured manually in their Syncthing apps. Nix only
+declares the laptop's device and folder relationships; it does not and cannot
+manage the Windows Syncthing installation.
 
 **This machine's own device ID does not need declaring.** Verified against a live
 instance: a folder submitted listing only the phone came back normalised to
@@ -335,7 +340,26 @@ instance: a folder submitted listing only the phone came back normalised to
 `~/Sync` is created by Syncthing along with its `.stfolder` marker, also verified,
 so there is no activation step for it.
 
-### Pairing a phone or the desktop
+### Pairing the desktop or a phone
+
+The desktop's ID is already declared as `desktop` in `hosts/arch.nix` (this
+repo). On Windows Syncthing, add the laptop and the phone as devices manually
+using their IDs, leaving Introducer/Auto-accept off, same as below. Accept the
+laptop's `documents` and `shared` offers at `D:\Documents` and `D:\Sync`
+respectively, with folder type **Send & Receive** and **Trash Can File
+Versioning** set to 30 days.
+
+Android exposes `DCIM` and `Pictures` as separate directories, so use two
+folder IDs rather than trying to overlap them into one Syncthing folder:
+
+| folder ID | Android path | Windows path |
+| --- | --- | --- |
+| `phone-dcim` | `DCIM` | `D:\Pictures\Phone\DCIM` |
+| `phone-pictures` | `Pictures` | `D:\Pictures\Phone\Pictures` |
+
+Create/share these directly between the phone and Windows (the laptop is not a
+member). Set both sides to **Send & Receive** and **Trash Can File
+Versioning**, clean out after **30 days**.
 
 Get this laptop's ID **on the laptop**:
 

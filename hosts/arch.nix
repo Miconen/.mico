@@ -23,7 +23,7 @@
   xdg.configFile."kitty/kitty.conf".source = ../config/kitty/kitty.conf;
 
   # ---------------------------------------------------------------------------
-  # Syncthing - PHASE 2: laptop <-> phone.
+  # Syncthing - laptop <-> phone <-> Windows desktop.
   #
   # Deliberately laptop-only. WSL is excluded because syncing into a VHDX that
   # spends most of its life powered off achieves nothing, and the Windows host is
@@ -42,7 +42,8 @@
   # instance: submitting a folder that lists only the phone came back normalised
   # to [phone, local], because Syncthing inserts the local device itself.
   #
-  # Phase 3 adds the desktop and a bidirectional `phone-camera` folder.
+  # Windows is configured manually in its Syncthing app; this Nix block only
+  # declares what the Arch laptop shares with it.
   # ---------------------------------------------------------------------------
   services.syncthing = {
     enable = true;
@@ -68,11 +69,14 @@
       };
 
       # Device IDs are public keys, so committing them is fine.
-      devices.phone.id = "3A5SBCS-TY35O3C-NZS6Q2S-RHUP5IV-KIAAQ5E-HOVWHZT-NMUHPDV-D3FY7Q5";
+      devices = {
+        phone.id = "3A5SBCS-TY35O3C-NZS6Q2S-RHUP5IV-KIAAQ5E-HOVWHZT-NMUHPDV-D3FY7Q5";
+        desktop.id = "MZMZAS4-VKZ3IBN-2OKTMZM-2ROYXPW-BU53VSU-FNNSOJM-YIPCG6Q-FUCPLQ3";
+      };
 
       folders = {
-        # Bidirectional, since the phone relays laptop <-> desktop changes once
-        # the desktop joins in Phase 3.
+        # Bidirectional so laptop <-> desktop changes relay through the phone,
+        # and vice versa.
         #
         # trashcan versioning is a 30-day undo window, not an archive: Syncthing
         # only versions files it removes on your behalf, so a deletion you make
@@ -81,7 +85,10 @@
         documents = {
           id = "documents";
           path = "${config.home.homeDirectory}/Documents";
-          devices = [ "phone" ];
+          devices = [
+            "phone"
+            "desktop"
+          ];
           type = "sendreceive";
           versioning = {
             type = "trashcan";
@@ -94,7 +101,10 @@
         shared = {
           id = "shared";
           path = "${config.home.homeDirectory}/Sync";
-          devices = [ "phone" ];
+          devices = [
+            "phone"
+            "desktop"
+          ];
           type = "sendreceive";
           versioning = {
             type = "trashcan";
