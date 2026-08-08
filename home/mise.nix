@@ -27,7 +27,11 @@
     globalConfig = {
       tools = {
         node = "24";
-        python = "3.13";
+        # Pin the patch: on the WSL install, mise's cached remote-version lookup
+        # passed the fuzzy "3.13" selector directly to python-build. That tool
+        # only has concrete definitions (3.13.15), so fallback compilation died
+        # with "definition not found: 3.13".
+        python = "3.13.15";
         go = "1.26";
         rust = "1.97";
       };

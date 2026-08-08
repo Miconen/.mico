@@ -537,7 +537,9 @@ package (a store login shell can lock you out after GC), or use
   `bootstrap.sh` — and that one does **not** roll back with a generation.
 - `auto-optimise-store` is a daemon setting needing root, so `bootstrap.sh` does it.
 - `mise install` runs on every `hms` as an activation hook. Skip with
-  `MICO_SKIP_MISE_INSTALL=1`.
+  `MICO_SKIP_MISE_INSTALL=1`. Python is pinned to a concrete patch because a
+  stale mise version cache once passed the fuzzy `3.13` selector directly to
+  python-build, which only accepts definitions such as `3.13.15`.
 - **Ctrl-R is atuin**, not fzf. fzf's history widget is deliberately blanked
   (`historyWidget.command = ""`), which is the documented way to hand Ctrl-R to a
   history manager. Up/Down stay on zsh-history-substring-search via
