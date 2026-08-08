@@ -385,11 +385,22 @@ fi
 # ---------------------------------------------------------------------------
 step "System packages (pacman)"
 
+pacman_ready=0
 if ((!DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found, not an Arch-based system"
 else
+  # A stale sync database can reference package versions already rotated off the
+  # mirrors (404). Arch does not support partial upgrades, so refresh and upgrade
+  # before resolving missing packages.
+  ok "refreshing package databases and upgrading the system"
+  pacman_ready=1
+  if ! run sudo pacman -Syu --noconfirm; then
+    warn "pacman -Syu failed; skipping package and AUR changes"
+    pacman_ready=0
+  fi
+
   mapfile -t wanted < <(
     {
       read_list "$REPO/packages/common.txt"
@@ -407,7 +418,9 @@ else
     fi
   done
 
-  if ((${#missing[@]} == 0)); then
+  if ((pacman_ready == 0)); then
+    skip "system package changes skipped after failed pacman -Syu"
+  elif ((${#missing[@]} == 0)); then
     ok "all ${#wanted[@]} declared system packages already installed"
   else
     ok "installing ${#missing[@]} missing: ${missing[*]}"
@@ -421,7 +434,7 @@ else
   # removed when that parent goes. `pacman -S --needed` will NOT fix this: it
   # skips already-installed packages without touching the install reason, so the
   # reason has to be set separately.
-  if ((${#dep_only[@]})); then
+  if ((pacman_ready)) && ((${#dep_only[@]})); then
     ok "marking ${#dep_only[@]} dependency-only as explicit: ${dep_only[*]}"
     run sudo pacman -D --asexplicit -- "${dep_only[@]}" \
       || warn "could not update install reasons"
@@ -477,6 +490,8 @@ if ((!DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found"
+elif ((pacman_ready == 0)); then
+  skip "pacman upgrade did not complete"
 elif command -v paru >/dev/null; then
   skip "paru already installed ($(paru --version 2>/dev/null | head -1))"
 elif ((DRY)); then
@@ -536,6 +551,8 @@ if ((!DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found"
+elif ((pacman_ready == 0)); then
+  skip "pacman upgrade did not complete"
 else
   mapfile -t aur_wanted < <(
     {
@@ -640,9 +657,19 @@ else
     warn "these are installed via pacman but now come from nix:"
     printf '      %s\n' "${present[*]}"
     if confirm "remove them?"; then
-      if ! run sudo pacman -Rns --noconfirm -- "${present[@]}"; then
-        warn "removal blocked by dependencies - demoting to dependency-only instead"
-        run sudo pacman -D --asdeps -- "${present[@]}" || true
+      removed=()
+      blocked=()
+      for p in "${present[@]}"; do
+        if run sudo pacman -Rns --noconfirm -- "$p"; then
+          removed+=("$p")
+        else
+          blocked+=("$p")
+        fi
+      done
+      ((${#removed[@]})) && ok "removed: ${removed[*]}"
+      if ((${#blocked[@]})); then
+        warn "kept because another pacman package depends on them: ${blocked[*]}"
+        warn "they remain explicit so pacman will not orphan/remove required dependencies"
       fi
     else
       skip "left in place; nix wins by PATH order anyway"
@@ -675,8 +702,10 @@ tun_usable() {
 
 if tun_usable; then
   skip "/dev/net/tun opens (tun driver present)"
+elif [[ $HOST == wsl ]]; then
+  warn "/dev/net/tun does not open; enable WSL's tun support on the Windows side"
 elif [[ ! -d /lib/modules/$kernel_release ]]; then
-  # `linux` is declared in packages/common.txt, so the pacman step above can
+  # `linux` is declared in packages/arch.txt, so the pacman step above can
   # upgrade the kernel out from under the running one. pacman removes the old
   # module tree, and modprobe then fails for every module until a reboot:
   #   modprobe: FATAL: Module tun not found in directory /lib/modules/<old>
@@ -706,7 +735,9 @@ fi
 
 # modprobe above does not survive a reboot.
 tun_modconf=/etc/modules-load.d/tun.conf
-if [[ -f $tun_modconf ]] && grep -qx 'tun' "$tun_modconf"; then
+if [[ $HOST == wsl ]]; then
+  skip "WSL kernel modules are managed by Windows; not writing $tun_modconf"
+elif [[ -f $tun_modconf ]] && grep -qx 'tun' "$tun_modconf"; then
   skip "tun already declared in $tun_modconf"
 elif [[ ! -d /etc/modules-load.d ]]; then
   skip "no /etc/modules-load.d - not a systemd system"

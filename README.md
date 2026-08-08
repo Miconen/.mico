@@ -510,8 +510,10 @@ already-installed one has to go by hand:
 sudo pacman -Rns paru-bin-debug
 ```
 
-**`pacman -Rns git` refuses.** Something depends on it.
-`sudo pacman -D --asdeps git` instead.
+**`pacman -Rns git` refuses.** Something depends on it. Current bootstrap tries
+migrated packages one at a time and leaves dependency-blocked ones installed and
+explicit; nix still wins through PATH ordering. Do not force-remove or demote a
+package that pacman needs.
 
 **Don't** put `gcc` in the nix profile (breaks `makepkg`), make `zsh` a nix
 package (a store login shell can lock you out after GC), or use

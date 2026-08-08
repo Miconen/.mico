@@ -3,6 +3,13 @@
 # Everything here is hardware, desktop, or GUI - the categories nix explicitly
 # does not manage in this setup.
 
+# Kernel, firmware, initramfs, and btrfs tooling. WSL gets none of these: it
+# boots the Windows-provided kernel, has no Arch-managed /boot, and uses ext4.
+linux
+linux-firmware
+mkinitcpio
+btrfs-progs
+
 # CPU microcode
 amd-ucode
 

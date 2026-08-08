@@ -1,9 +1,5 @@
 # AUR packages for every host. Installed with paru, not pacman.
 #
-# paru itself is the chicken-and-egg case: it is an AUR package, so it cannot be
-# installed by an AUR helper. bootstrap.sh builds it directly with makepkg before
-# this list is processed, then finds it already installed here.
-#
-# paru-bin rather than paru: paru-bin ships a prebuilt binary, while paru builds
-# from source and would drag a full Rust toolchain onto every new machine.
-paru-bin
+# paru itself is bootstrapped separately by bootstrap.sh and deliberately does
+# not live here: an existing source-built `paru` satisfies the helper role, while
+# declaring `paru-bin` here would try to install a conflicting package.

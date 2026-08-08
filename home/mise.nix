@@ -46,7 +46,11 @@
   home.activation.miseInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ -n "''${MICO_SKIP_MISE_INSTALL:-}" ]; then
       verboseEcho "Skipping mise install (MICO_SKIP_MISE_INSTALL is set)"
-    elif ! ( export MISE_YES=1; run --quiet ${pkgs.mise}/bin/mise install ); then
+    elif ! (
+      export MISE_YES=1
+      export PATH="${lib.makeBinPath [ pkgs.curl pkgs.wget pkgs.openssh pkgs.git ]}:$PATH"
+      run --quiet ${pkgs.mise}/bin/mise install
+    ); then
       warnEcho "mise install failed - offline? Run 'mise install' when connected."
     fi
   '';

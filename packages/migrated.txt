@@ -4,9 +4,9 @@
 # confirming, and only after home-manager has successfully activated - so the
 # nix replacement is guaranteed to already be on PATH.
 #
-# `git` is the risky one: other packages may depend on it. If pacman refuses to
-# remove it, bootstrap demotes it with `pacman -D --asdeps git` instead, which
-# leaves it installed but no longer explicitly wanted.
+# Some entries (notably git/ripgrep) may be required by other pacman packages.
+# bootstrap tries each removal independently and leaves dependency-blocked ones
+# installed and explicit.
 
 eza
 fastfetch

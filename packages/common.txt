@@ -7,21 +7,16 @@
 # Anything that is a CLI tool belongs in home/common.nix instead. See the split
 # rule in README.md.
 
-# Base system
+# Base system. Kernel/firmware/initramfs live in arch.txt: WSL boots the
+# Windows-provided kernel and has no Arch-managed /boot.
 base
 base-devel
 sudo
-linux
-linux-firmware
-mkinitcpio
 
 # Build toolchain. gcc comes in via base-devel anyway, but it is declared
 # explicitly because the split rule names it: nix must never provide the
 # compiler, since a /nix/store gcc shadows the system one and breaks makepkg.
 gcc
-
-# Filesystem / disk
-btrfs-progs
 
 # The login shell binary. Its CONFIG is managed by nix, but the binary must be
 # a stable system path - a /nix/store login shell can lock you out after a GC.
