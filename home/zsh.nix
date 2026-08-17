@@ -110,6 +110,9 @@
       docker = "podman";
       dcb = "docker compose up --build";
       api = "docker compose --profile dev up --build";
+      # Purge dead/stuck containers, networks and restart podman socket
+      dpurge = "podman compose down 2>/dev/null || true; podman rm -fa 2>/dev/null || true; podman network prune -f 2>/dev/null || true; systemctl --user restart podman.socket 2>/dev/null || true";
+      ppurge = "dpurge";
 
       # Node
       bot = "npm run start | pino-pretty -c";

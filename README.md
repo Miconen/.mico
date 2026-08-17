@@ -51,6 +51,12 @@ automatically:
   but not `postgres` or `adminer`, which otherwise fail to resolve at all.
   `config/containers/registries.conf` sets `docker.io` and
   `short-name-mode = "permissive"` so nothing prompts mid-build.
+- **Firewall driver (`firewall_driver = "none"`).** In WSL2 kernels, missing
+  `nftables` modules cause Netavark to fail when creating container bridge networks
+  (`netavark: nftables error: "nft" did not return successfully`). `config/containers/containers.conf`
+  and `/etc/containers/containers.conf.d/01-firewall.conf` set `none` so container
+  networking and port forwarding operate without host netfilter rulesets. Use `dpurge`
+  or `ppurge` to clean dead containers/networks and bounce the podman socket.
 
 The multi-user nix daemon creates `nixbld1..nixbld32` build users, and sddm
 listed every one of them on the greeter. `config/sddm/10-hide-system-users.conf`

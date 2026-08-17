@@ -129,6 +129,9 @@
     # a plain managed file. It fixes bare image names like `postgres:latest`,
     # which Arch's short-name aliases do not cover.
     "containers/registries.conf".source = ../config/containers/registries.conf;
+
+    # Netavark (Podman network backend) firewall settings. Disables host nftables
+    # ruleset generation to work reliably on WSL2 kernels.
     "containers/containers.conf".source = ../config/containers/containers.conf;
   };
 

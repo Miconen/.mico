@@ -758,6 +758,24 @@ else
   rm -f "$tun_tmp"
 fi
 
+# Netavark firewall driver: in WSL2 kernels (and minimal kernels without full
+# nftables NAT modules), netavark fails with:
+#   netavark: nftables error: "nft" did not return successfully while applying ruleset
+# Writing firewall_driver = "none" at system level ensures all rootless/daemon
+# invocations bypass nftables.
+containers_conf_src="$REPO/config/containers/containers.conf"
+containers_conf_dst=/etc/containers/containers.conf.d/01-firewall.conf
+if ! command -v podman >/dev/null; then
+  skip "podman not installed"
+elif [[ ! -f $containers_conf_src ]]; then
+  warn "missing $containers_conf_src"
+elif [[ -f $containers_conf_dst ]] && cmp -s "$containers_conf_src" "$containers_conf_dst"; then
+  skip "$containers_conf_dst already up to date"
+else
+  ok "configuring system-wide podman network firewall driver ($containers_conf_dst)"
+  run sudo install -Dm644 "$containers_conf_src" "$containers_conf_dst"
+fi
+
 podman_storage_script="$REPO/scripts/podman-storage.sh"
 if ! command -v podman >/dev/null; then
   skip "podman not installed"
