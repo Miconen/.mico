@@ -129,6 +129,7 @@
     # a plain managed file. It fixes bare image names like `postgres:latest`,
     # which Arch's short-name aliases do not cover.
     "containers/registries.conf".source = ../config/containers/registries.conf;
+    "containers/containers.conf".source = ../config/containers/containers.conf;
   };
 
   # ---------------------------------------------------------------------------
