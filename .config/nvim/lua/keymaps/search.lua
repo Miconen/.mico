@@ -40,6 +40,14 @@ map("n", "<leader>sd", function()
 	Snacks.picker.diagnostics()
 end, { desc = "Diagnostics" })
 
+map("n", "<leader>ss", function()
+	Snacks.picker.lsp_symbols()
+end, { desc = "Symbols in buffer" })
+
+map("n", "<leader>sS", function()
+	Snacks.picker.lsp_workspace_symbols()
+end, { desc = "Symbols in workspace" })
+
 map("n", "<leader>sr", function()
 	Snacks.picker.recent()
 end, { desc = "Recent files" })

@@ -168,7 +168,15 @@ return {
 						},
 					},
 				},
-				ts_ls = {},
+				ts_ls = {
+					init_options = {
+						preferences = {
+							-- Imports types using `import type { Foo }` or `import { type Foo }`
+							-- so Biome doesn't complain about type-only imports being imported as values.
+							preferTypeOnlyAutoImports = true,
+						},
+					},
+				},
 				pyright = {},
 				lua_ls = {
 					settings = {
@@ -308,13 +316,21 @@ return {
 				["<C-f>"] = { "scroll_documentation_down", "fallback" },
 				["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
 				["<C-e>"] = { "hide" },
+				-- Manually trigger snippet completion on demand with <C-s> in insert mode
+				["<C-s>"] = {
+					function(cmp)
+						cmp.show({ providers = { "snippets" } })
+					end,
+				},
 			},
 			appearance = {
 				use_nvim_cmp_as_default = false,
 				nerd_font_variant = "mono",
 			},
 			sources = {
-				default = { "lazydev", "lsp", "path", "snippets", "buffer", "dadbod" },
+				-- 'snippets' is removed from default auto-completion so snippets don't clutter normal completions.
+				-- Trigger them on-demand with <C-s> in insert mode or manage them with nvim-scissors.
+				default = { "lazydev", "lsp", "path", "buffer", "dadbod" },
 				providers = {
 					lazydev = {
 						name = "LazyDev",

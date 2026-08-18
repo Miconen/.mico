@@ -114,4 +114,31 @@ return {
 			},
 		},
 	},
+
+	-- Simple & visual snippet manager. Allows turning visual selections or snippets
+	-- into reusable VSCode-style JSON snippets saved in ~/.config/nvim/snippets.
+	{
+		"chrisgrieser/nvim-scissors",
+		dependencies = { "folke/snacks.nvim" },
+		opts = {
+			snippetDir = vim.fn.stdpath("config") .. "/snippets",
+		},
+		keys = {
+			{
+				"<leader>sa",
+				function()
+					require("scissors").addNewSnippet()
+				end,
+				mode = { "n", "x" },
+				desc = "Add snippet from selection / new",
+			},
+			{
+				"<leader>se",
+				function()
+					require("scissors").editSnippet()
+				end,
+				desc = "Edit / search snippets",
+			},
+		},
+	},
 }
