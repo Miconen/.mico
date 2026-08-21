@@ -21,6 +21,34 @@ map("n", "<leader>wc", "<cmd>close<cr>", { desc = "Close window" })
 map("n", "<leader>wo", "<cmd>only<cr>", { desc = "Close other windows" })
 map("n", "<leader>w=", "<C-w>=", { desc = "Balance windows" })
 
+-- ── 2-Way File Diffing ───────────────────────────────────────────────────────
+map("n", "<leader>wdf", function()
+	Snacks.picker.files({
+		prompt = "Diff with File ❯ ",
+		confirm = function(picker, item)
+			picker:close()
+			if item and item.file then
+				vim.cmd("vertical diffsplit " .. vim.fn.fnameescape(item.file))
+			end
+		end,
+	})
+end, { desc = "Diff current buffer with file" })
+
+map("n", "<leader>wdb", function()
+	Snacks.picker.buffers({
+		prompt = "Diff with Buffer ❯ ",
+		confirm = function(picker, item)
+			picker:close()
+			if item and item.file then
+				vim.cmd("vertical diffsplit " .. vim.fn.fnameescape(item.file))
+			end
+		end,
+	})
+end, { desc = "Diff current buffer with open buffer" })
+
+map("n", "<leader>wdt", "<cmd>windo diffthis<cr>", { desc = "Diff all open splits" })
+map("n", "<leader>wdq", "<cmd>windo diffoff<cr>", { desc = "Stop diff (diffoff)" })
+
 -- ── Misc editing ─────────────────────────────────────────────────────────────
 map("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
 map("n", "<leader>q", vim.diagnostic.setloclist, { desc = icons.Search .. " Quickfix diagnostics" })
