@@ -1,13 +1,27 @@
-# .mico
+# mico
 
-Home-manager flake for `miso`. Arch laptop + Arch on WSL.
+Your Arch laptop and Arch-on-WSL, as a git repo. You forgot how this works.
+That is fine. You almost never need the internals.
 
-Nix owns CLI tools and configs. Pacman owns the kernel, drivers, desktop, GUI,
-`gcc`/`base-devel`, the `zsh` binary, `vim`/`nano`, `openssh` and `podman`. AUR
-packages go through paru, declared in `packages/aur-*.txt`.
-The neovim config lives here too, at `.config/nvim`.
+Nix owns CLI tools and their configs. Pacman owns the kernel, drivers, desktop,
+GUI, `gcc`/`base-devel`, the `zsh` binary, `vim`/`nano`, `openssh`, and `podman`.
+AUR packages go in `packages/aur-*.txt` and get installed by paru.
 
-## Install
+After the first switch, `mico` is on PATH everywhere.
+
+```
+mico switch              apply nix home config          (used to be hms)
+mico update              bump flake.lock, then switch
+mico bootstrap           first boot / re-run machine setup
+mico install             open packages/ in nvim
+mico install mesa        add to packages/common.txt, then bootstrap
+mico check               report pacman drift, change nothing
+mico lint                format and lint this repo
+```
+
+`hms` still works. It is just `mico switch`.
+
+## First time
 
 ```bash
 sudo pacman -S --needed git
@@ -15,86 +29,9 @@ git clone https://github.com/Miconen/.mico.git ~/.mico
 ~/.mico/bootstrap.sh
 ```
 
-Idempotent — re-run it after editing `packages/*.txt`. Use `--dry-run` first on a
-machine you care about.
+Safe to re-run. Use `--dry-run` on a machine you care about.
 
-```
---check       report pacman drift and exit, read-only, no sudo
---dry-run     change nothing, just print
---host wsl    override host detection
---yes         no prompts
---no-pacman   skip pacman entirely
---no-remove   install pacman packages, never remove any
-```
-
-It does: btrfs subvolume for `/nix` → install nix → `auto-optimise-store` →
-pacman sync → pacman.conf → build paru → AUR sync → `~/.gitconfig.local` → `home-manager switch` → remove pacman packages nix
-replaced → podman (tun module, storage driver) → `podman.socket` → system
-maintenance timers → root-level GC timer.
-
-Rootless podman needs three things that are easy to miss, all handled
-automatically:
-
-- **A graph driver that matches the filesystem.** This cannot be a static config
-  file: home is btrfs here, where the default `overlay` driver is refused
-  (`'overlay' is not supported over btrfs`), while WSL is ext4 where `overlay` is
-  correct and btrfs would fail the same way. `scripts/podman-storage.sh` detects
-  the filesystem, tries the native btrfs driver then `fuse-overlayfs`, and keeps
-  whichever podman actually accepts. It also deletes a store left behind by a
-  different driver — containers/storage prefers whichever driver already has a
-  directory in the graphroot over the one in `storage.conf`, so a stale
-  `overlay/` silently wins. Run it with `--diagnose` to dump what podman reads.
-- **The `tun` module.** Without `/dev/net/tun`, pasta cannot set up a tap device
-  and every build fails at `Failed to open() /dev/net/tun`. bootstrap loads it
-  and declares it in `/etc/modules-load.d/tun.conf` for the next boot.
-- **An unqualified search registry.** Arch's short-name aliases cover `golang`
-  but not `postgres` or `adminer`, which otherwise fail to resolve at all.
-  `config/containers/registries.conf` sets `docker.io` and
-  `short-name-mode = "permissive"` so nothing prompts mid-build.
-- **Firewall driver (`firewall_driver = "none"`).** In WSL2 kernels, missing
-  `nftables` modules cause Netavark to fail when creating container bridge networks
-  (`netavark: nftables error: "nft" did not return successfully`). `config/containers/containers.conf`
-  and `/etc/containers/containers.conf.d/01-firewall.conf` set `none` so container
-  networking and port forwarding operate without host netfilter rulesets. Use `dpurge`
-  or `ppurge` to clean dead containers/networks and bounce the podman socket.
-
-The multi-user nix daemon creates `nixbld1..nixbld32` build users, and sddm
-listed every one of them on the greeter. `config/sddm/10-hide-system-users.conf`
-hides accounts by shell rather than by name, so it needs no updating if the
-build-user count changes.
-
-The maintenance timers are all off by default on Arch: `fstrim.timer` (SSD TRIM),
-`btrfs-scrub@-.timer` (monthly checksum scrub of `/` — btrfs stores checksums but
-never verifies them unless scrubbed), `smartd`, `paccache.timer`, and
-`reflector.timer`.
-
-AUR packages are separate because `pacman -S` cannot install them. paru itself is
-AUR-only, so bootstrap builds `paru-bin` with `makepkg` only when no `paru`
-provider already exists, then uses the existing helper for the rest. The helper
-is infrastructure rather than an `aur-common.txt` entry, so a source-built
-`paru` does not conflict with `paru-bin`. AUR builds run with system toolchains;
-WSL declares pacman's Go specifically because Arch's patched Go stdlib cannot be
-mixed with mise's upstream compiler.
-
-`--check` audits pacman against `packages/*.txt` and exits 1 on drift. Run it when
-you suspect you `pacman -S`’d something and forgot. It reports four states:
-not installed, installed only as a dependency (a declaration is not really
-satisfied until the install reason is explicit, since a dependency can be removed
-with its parent), explicitly installed but undeclared, and migrated-to-nix but
-still present:
-
-```bash
-~/.mico/bootstrap.sh --check
-```
-
-On WSL, clipboard integration does not need pacman's `xclip`: the managed
-`pbcopy`/`pbpaste` wrappers use WSLg's Wayland clipboard, then fall back to
-Windows `clip.exe` and PowerShell. `xdg-utils` is only declared for the Arch
-desktop, where browser/file MIME launching is meaningful.
-
-### WSL first
-
-`/etc/wsl.conf` on the Windows side, then `wsl --shutdown`:
+On WSL, put this in `/etc/wsl.conf` on the Windows side, then `wsl --shutdown`:
 
 ```ini
 [boot]
@@ -104,489 +41,151 @@ systemd=true
 appendWindowsPath=false
 ```
 
-`systemd=true` is mandatory, the nix daemon needs it. `appendWindowsPath=false`
-stops Windows PATH shadowing nix binaries, but costs you `code` and
-`explorer.exe` in the shell.
+systemd is mandatory. The nix daemon needs it. Turning off Windows PATH stops
+`code.exe` from shadowing nix binaries. You lose `code` and `explorer.exe` in
+the shell. That is the trade.
 
-## Neovim
-
-Config lives at `.config/nvim`, imported with `git subtree` so all 16 commits of
-its history came with it. `~/.config/nvim` is an out-of-store symlink to the
-working tree, which is required: lazy.nvim writes `lazy-lock.json` into the config
-directory and a store path is read-only. Plugin updates therefore show up as a
-modified lockfile in `git status` - commit it.
-
-After pulling a commit that moves `lazy-lock.json`, run `:Lazy restore` so plugins
-match the lockfile, then `:TSUpdate`. The treesitter rewrite pins parser versions
-in its own `parser.lua`, so parsers must be rebuilt whenever that plugin moves -
-this is not optional, mismatched parsers crash highlighting.
-
-CI runs `stylua --check` and `selene`, matching the tools already in the
-mason-tool-installer list. Both are configured for zero findings, so anything new
-is a real signal:
-
-- `stylua.toml` writes out stylua's defaults explicitly, so a future release
-  changing one cannot silently reformat everything. Tabs, because 17 of 20 files
-  already used tabs; the other three were normalised on import.
-- `selene.toml` + `vim.yml` define the Neovim standard library. `Snacks` is
-  declared as a global, otherwise snacks.nvim usage alone produced 37 undefined
-  variable errors.
-- `mixed_table` and `multiple_statements` are allowed: lazy.nvim specs are
-  `{ "owner/repo", opt = x }` by definition, and `function() thing() end` inline in
-  a keymap is the standard idiom.
-
-**One trap worth knowing**, documented in `lua/plugins/lsp.lua`: selene reported
-the top-level `local map = vim.keymap.set` as unused. It is not. A Lua local is not
-in scope until after its own statement, so the `map(...)` call inside the inner
-`local map = function(...)` resolves to the outer binding. Verified with luajit -
-deleting that line would break every LSP keymap.
+Until the first successful switch, there is no `mico` on PATH. Run
+`~/.mico/bootstrap.sh` (or `~/.mico/scripts/mico bootstrap`) once, then forget
+the path.
 
 ## Adding a package
 
-Try it first without installing anything - `comma` runs it straight from nixpkgs:
+Try it first. Nothing gets installed.
 
 ```bash
-, cowsay hello              # one-off, nothing persisted
-nsearch ripgrep             # nix search nixpkgs ripgrep
-nwhich bin/ffmpeg           # nix-locate: which package provides this binary
+, cowsay hello              # one-off from nixpkgs
+nsearch ripgrep             # search nixpkgs
+nwhich bin/ffmpeg           # which package provides this binary
 ```
 
-If you want to keep it, add one line to `home.packages`:
+Want to keep it? It depends what it is.
+
+**CLI tool.** Open `home/common.nix` (`pkgconf`) and add a line to
+`home.packages`. If home-manager has a `programs.*` module for it, use that
+instead. The module also owns the config, which is why btop settings survive a
+new machine and a first-run `btop.conf` does not. Then:
 
 ```bash
-pkgconf                     # opens home/common.nix
-hms
+mico switch
 ```
 
-That is the whole workflow. Two rules:
+**System / GUI / kernel thing.**
 
-- **Never `nix profile install`.** It is invisible to this repo and drifts between
-  machines. `comma` and `nix shell nixpkgs#foo` cover the throwaway case.
-- **If a tool has a `programs.*` module, prefer it** over `home.packages`. The
-  module manages config too, which is the difference between btop keeping its
-  settings across machines and btop writing its own file on first run. Check with
-  `man home-configuration.nix` or search the home-manager options site.
+```bash
+mico install mesa                 # packages/common.txt, both machines
+mico install --local hyprland     # packages/arch.txt or wsl.txt
+mico install --aur something      # packages/aur-common.txt
+mico install                      # just open the folder in nvim
+```
 
-Adding a **new file** under `home/` also needs `git add`, because flakes ignore
-untracked files - nix will tell you so by name if you forget.
+That writes the list, then runs bootstrap so pacman/paru actually install it.
+
+Two rules you will break if you are tired:
+
+- Never `nix profile install`. Invisible to this repo. Drifts between machines.
+- Never put `gcc` or `zsh` in the nix profile. gcc shadows pacman's and breaks
+  makepkg. A store login shell can lock you out after GC.
+
+New files under `home/` need `git add` before switch. Flakes silently ignore
+untracked files. Editing an already-tracked file without committing is fine.
 
 ## Daily
 
 ```bash
-hms                              # nh home switch + syntax check + exec zsh
-nix flake update                 # bump nixpkgs + home-manager, then hms
-home-manager generations         # list rollback targets
-, cowsay hi                      # run a package without installing it
-nix-locate bin/ffmpeg            # which package provides this file
-nix shell nixpkgs#foo            # one-off shell, not persisted
+mico switch                 # apply home.nix changes
+mico update                 # flake.lock + switch
+mico bootstrap              # pacman/AUR + the rest of machine setup
+mico check                  # did you pacman -S something and forget?
+mico lint                   # before a push, or whenever
 ```
 
-`hms` runs `nh home switch`, which prints a package diff of what changed, then
-`zsh -n ~/.zshrc` before `exec zsh`. That guard matters: activation can succeed
-while writing a `.zshrc` that does not parse, since home-manager never parses the
-zsh it generates.
-
-Editing:
+`mico switch` prints a package diff, syntax-checks `~/.zshrc`, then execs zsh.
+That last bit matters. home-manager will happily write a `.zshrc` that does not
+parse.
 
 ```bash
-zshconf                          # opens home/zsh.nix
-nixconf                          # opens flake.nix
-hms && exec zsh
+zshconf                     # home/zsh.nix
+nixconf                     # flake.nix
+pkgconf                     # home/common.nix
 ```
 
-`git add` new files before switching — flakes read the git tree and **silently
-ignore untracked files**. Editing tracked files uncommitted is fine.
+`nix flake check` builds both hosts. CI does the same on every push.
 
-Working on the repo itself:
+## Neovim
 
-```bash
-direnv allow            # once; loads nixfmt, statix, deadnix from the devShell
-nix fmt                 # format all .nix
-nix flake check         # builds BOTH hosts
-```
+Config is `.config/nvim` in this repo. `~/.config/nvim` is an out-of-store
+symlink into the working tree, because lazy.nvim writes `lazy-lock.json` and a
+store path is read-only. Plugin updates show up as a dirty lockfile. Commit it.
 
-CI builds both hosts on every push. Lint runs via `ci/lint.sh`, which also works
-locally:
+After pulling a commit that moves the lockfile, `:Lazy restore` then `:TSUpdate`.
+Mismatched treesitter parsers crash highlighting. This is not optional.
 
-```bash
-./ci/lint.sh          # nixfmt, statix, deadnix, shellcheck, shfmt, actionlint, zellij
-./ci/zellij-check.sh  # starts a real session and asserts on the live layout
-```
+## Zellij
 
-Lint is advisory while `continue-on-error: true` is set on that job in
-`.github/workflows/build.yml`. Remove it to make lint blocking.
-
-`statix.toml` disables `repeated_keys` and `empty_pattern` — both are sensible
-for ordinary Nix but wrong for module files, where flat `programs.foo.bar = ...`
-and a `{ ... }:` signature are the convention.
-
-Preview without switching:
-
-```bash
-nix eval --raw .#homeConfigurations.arch.config.programs.zsh.initContent | less
-nix build .#homeConfigurations.arch.activationPackage --no-link
-```
-
-`nix eval` catches bad option names, `nix build` catches build failures eval
-can't see (starship presets, `bat cache --build`).
-
-## Verify an activation
-
-```bash
-which -a git eza zoxide lazygit nvim starship
-echo "$ZSH_AUTOSUGGEST_STRATEGY"
-bindkey '^[[A'
-git config --get merge.conflictstyle
-git config --get user.email
-readlink -f ~/.config/nvim
-fc-list | grep -ci maple
-mise ls
-```
-
-Want: nix paths first, `history completion`, `history-substring-search-up`,
-`zdiff3`, your email, `/home/miso/.mico/.config/nvim`, non-zero, no `(missing)`.
-
-## zellij
+Mode entry is Alt, not Ctrl. Globally, zellij only eats Ctrl-g and Ctrl-q.
 
 ```
 Alt-p    pane      Alt-t    tab       Alt-r    resize
 Alt-s    scroll    Alt-m    move
 Alt-d    detach    Alt-n    new pane  Alt-h/j/k/l  move focus
-Ctrl-g   lock / unlock       Ctrl-q   quit (DESTROYS the session)
-in pane mode:  , / .  cycle swap layouts
-in tab mode:   , / .  break pane left/right
+Ctrl-g   lock               Ctrl-q    quit (kills the session)
 ```
 
-**Mode entry is on Alt, not Ctrl.** Ctrl-p/n/s/t/m used to be mode switches, which
-meant zellij ate blink.cmp's `<C-n>`/`<C-p>` completion keys and fzf's `Ctrl-T`
-widget - the reason for constantly reaching for Ctrl-g. Globally, zellij now
-intercepts only **Ctrl-g and Ctrl-q**; Ctrl-b and Ctrl-f exist but only inside
-scroll and search modes.
-
-Alt is not free either, it just collides with different things. zsh's emacs keymap
-binds nearly every Alt letter, so this deliberately costs three rarely-used ones -
-`Alt-p` history-search-backward, `Alt-s` spell-word, `Alt-t` transpose-words - while
-leaving `Alt-c` alone, since that is fzf's directory widget. `Alt-.`
-(insert-last-word) is also left alone, which is why swap layouts moved into pane
-mode rather than keeping a global binding.
-
-Bindings avoid `[` and `]` as primaries: on a Finnish ISO keyboard those are
-AltGr+8 / AltGr+9, so `Alt-[` is effectively unreachable. `,` and `.` are
-unshifted and adjacent. The bracket forms are kept as secondary bindings.
-
-**Config changes need the session recreated.** zellij reads its config only when
-the session's server starts, there is no reload action, and
-`session_serialization` makes `attach` resurrect the *old* layout - so editing
-`config.kdl` and running `hms` appears to do nothing:
+Config changes need a new session. zellij reads config when the server starts,
+and `session_serialization` resurrects the old layout on attach. `mico switch`
+alone re-execs zsh *inside* the existing session and looks like a no-op.
 
 ```bash
-zreload            # zellij delete-session --force main
+zreload                     # delete the `main` session
 ```
 
-That ends the current session (the terminal closes, since `.zshrc` exec'd into
-it). Open a new terminal for a fresh session on the new config. `hms` alone only
-re-execs zsh *inside* the existing session.
-
-**Tab names follow the project automatically.** A `chpwd` hook renames the tab to
-the git repo name, or the directory name outside a repo, or `~` at home. No
-keybind and nothing to run. It skips the subprocess when the name has not changed.
-
-**New tabs get the status bar via `default_tab_template`.** A named
-`tab_template` only applies to tabs written into the layout file; tabs created at
-runtime use zellij's `new_tab_template`, which only `default_tab_template`
-populates. `zellij action dump-layout` on a live session showed
-`new_tab_template { }` - empty - which is why new tabs had no bar.
-
-**`on_force_close "detach"`.** This fires when the terminal holding the session is
-closed. It used to be `"quit"`, which destroyed the session on every window close
-and made `session_serialization` pointless. With `detach`, closing kitty leaves
-panes and cwds intact for next time. `detach` is also zellij's own default.
-
-**There is deliberately no session mode.** Six binds for things you can reach from
-the CLI when you actually need them:
-
-```bash
-zellij action launch-or-focus-plugin zellij:session-manager --floating
-zellij ls                    # list sessions
-zellij kill-session main     # if a session gets wedged
-```
-
-`ZELLIJ_SKIP=1` starts a shell without attaching, for when a multiplexer is in the
-way.
+The terminal closes. Open a new one.
 
 ## Syncthing
 
-Laptop only. WSL is excluded on purpose: syncing into a VHDX that is usually
-powered off achieves nothing, and Windows is the right place to run Syncthing for
-that machine.
+Laptop only. Pairing is declarative in `hosts/arch.nix`. Do not accept devices
+or folders in the web UI. `overrideDevices` / `overrideFolders` delete anything
+you click on the next switch.
 
-This is the one service nix owns. It is a per-user data daemon on a
-`systemd --user` unit rather than a system service, so it sits on the nix side of
-the split rule - but it is an exception worth knowing about.
+GUI is `http://127.0.0.1:8384`. Localhost only, no password, which is why no
+secret lives in this public repo.
 
-**Pairing is declarative, not click-through.** Put a device ID in
-`services.syncthing.settings.devices` and activate. Do **not** accept devices or
-folders in the web UI: `overrideDevices` and `overrideFolders` both default to
-true, so anything added by hand is deleted on the next `hms`. Device IDs are
-public keys, so committing them is fine.
+This machine's own device ID does not need declaring. Get it with
+`syncthing device-id` if a phone or the desktop needs it.
 
-GUI is `127.0.0.1:8384`, localhost only, so no password is needed - which also
-means no secret ever has to live in this public repo.
+## When it breaks
 
-### Status: desktop added
-
-| folder ID | laptop | Windows | phone | mode/versioning |
-| --- | --- | --- | --- | --- |
-| `documents` | `~/Documents` | `D:\Documents` | accepted path | bidirectional, 30-day trashcan |
-| `shared` | `~/Sync` | `D:\Sync` | accepted path | bidirectional, 30-day trashcan |
-| `phone-dcim` | not shared | `D:\Pictures\Phone\DCIM` | `DCIM` | Windows <-> phone, bidirectional, 30-day trashcan |
-| `phone-pictures` | not shared | `D:\Pictures\Phone\Pictures` | `Pictures` | Windows <-> phone, bidirectional, 30-day trashcan |
-
-Windows and Android are configured manually in their Syncthing apps. Nix only
-declares the laptop's device and folder relationships; it does not and cannot
-manage the Windows Syncthing installation.
-
-**This machine's own device ID does not need declaring.** Verified against a live
-instance: a folder submitted listing only the phone came back normalised to
-`[phone, local]`, because Syncthing inserts the local device itself.
-
-`~/Sync` is created by Syncthing along with its `.stfolder` marker, also verified,
-so there is no activation step for it.
-
-### Pairing the desktop or a phone
-
-The desktop's ID is already declared as `desktop` in `hosts/arch.nix` (this
-repo). On Windows Syncthing, add the laptop and the phone as devices manually
-using their IDs, leaving Introducer/Auto-accept off, same as below. Accept the
-laptop's `documents` and `shared` offers at `D:\Documents` and `D:\Sync`
-respectively, with folder type **Send & Receive** and **Trash Can File
-Versioning** set to 30 days.
-
-Android exposes `DCIM` and `Pictures` as separate directories, so use two
-folder IDs rather than trying to overlap them into one Syncthing folder:
-
-| folder ID | Android path | Windows path |
-| --- | --- | --- |
-| `phone-dcim` | `DCIM` | `D:\Pictures\Phone\DCIM` |
-| `phone-pictures` | `Pictures` | `D:\Pictures\Phone\Pictures` |
-
-Create/share these directly between the phone and Windows (the laptop is not a
-member). Set both sides to **Send & Receive** and **Trash Can File
-Versioning**, clean out after **30 days**.
-
-Get this laptop's ID **on the laptop**:
-
-```bash
-syncthing device-id
-```
-
-`http://127.0.0.1:8384` is the laptop's own web UI, opened in a browser on the
-laptop - not something you type into the phone. **Actions -> Show ID** there also
-shows a QR code, which beats typing 63 characters into a phone.
-
-Then in Syncthing-Fork, **Add Device**:
-
-| field | value | why |
-| --- | --- | --- |
-| ID | the laptop's device ID | or scan the QR |
-| Name | anything, e.g. `2B` | a local label only, never synced |
-| Addresses | leave `dynamic` | auto-discovery plus relay fallback. Hard-coding an address breaks when the LAN IP changes, and this laptop is behind port-restricted NAT anyway |
-| Folders | leave empty | the laptop already offers `documents` and `shared`; accept the prompt instead |
-| Introducer | **off** | it would let the laptop auto-add other devices to the phone, but `overrideDevices = true` means the laptop deletes anything auto-added, so pairing stays explicit |
-| Auto accept | **off** | otherwise folders are created at a path Syncthing picks for you |
-| Pause device | off | |
-| Untrusted device | **off** | that is the encrypted-relay mode, which was dropped; it needs a folder password and forces `receiveencrypted` |
-
-Accept the two folder shares on the phone when they appear. Do **not** accept
-anything on the laptop side - `overrideFolders` reverts it.
-
-`bootstrap.sh` reports on the service but deliberately does not
-`systemctl enable` it, since home-manager owns the unit.
-
-### Things that will bite you
-
-- **Syncthing has no store-and-forward.** Two devices exchange data only while
-  both are online. The public relay servers only help with NAT traversal; they do
-  not hold your files. Laptop and desktop are never on together, so the phone is a
-  member of the shared folders purely so changes can travel through it.
-- **The official Android app was archived in Dec 2024.** Use
-  [Syncthing-Fork](https://github.com/Catfriend1/syncthing-android), and exempt it
-  from battery optimisation or Doze will stall relaying.
-- **Folder IDs must match across devices.** The ID pairs a folder, not the label
-  or the path.
-- **It is not a backup.** The camera folder is bidirectional by choice, so a
-  deletion propagates. `trashcan` versioning with a 30-day window makes a
-  mis-click recoverable from `.stversions`, but Syncthing does not version
-  deletions you originate locally. Real photo backup is a separate job.
-- **Memory.** Measured at 31M RSS with `documents` + `shared`, so the laptop's 7G
-  is a non-issue at this size. `maxFolderConcurrency = 1` is kept as precaution
-  for when the camera folder adds thousands of files, not because it is needed
-  now. Check with `systemctl --user status syncthing`.
-- **This connection is relay-dependent for remote peers.** The laptop logged
-  `Detected NAT type: Port restricted NAT` and `Detected NAT services (count=0)`,
-  meaning no UPnP/NAT-PMP port mapping is available, so it joined a public relay.
-  On the same LAN, local discovery gives direct transfers and this does not
-  matter. Phone-to-desktop over the internet will go through a relay, which is
-  fine for documents but slow for a photo library - forward TCP+UDP 22000 on the
-  router if that becomes annoying.
-- RuneLite is deliberately **not** synced here; its own profile sync handles it,
-  which also keeps `credentials.properties` off the phone.
-
-## Fixes
-
-**Plugins silently don't load.** home-manager sources them with
-`[[ -f ]] && source` — a wrong `file` path produces no error at all. If
-`bindkey '^[[A'` prints nothing, the path in `programs.zsh.plugins` is wrong.
-
-**`readlink ~/.config/nvim` shows a store path.** Expected. It's a chain:
-`~/.config/nvim` → store symlink → working tree. Use `readlink -f`.
-
-**Neovim has no config.** The symlink at `~/.config/nvim` points into this repo,
-so a partial checkout breaks it. Activation warns if `init.lua` is missing.
-
-**`nix` not found after install.** Arch builds zsh with `--enable-etcdir=/etc/zsh`,
-so the installer's `/etc/zshrc` hook is ignored. Login shells still work via
-`/etc/zsh/zprofile` → `/etc/profile` → `/etc/profile.d/nix.sh`. For the current
-shell: `. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
-
-**Broken shell after a switch.**
+**Broken shell after a switch.** Keep a second terminal open while editing
+`zsh.nix`. Roll back with:
 
 ```bash
 home-manager generations
 /nix/store/<hash>-home-manager-generation/activate
 ```
 
-Keep a second terminal open while editing `zsh.nix`.
+**`nix` not found.** Current shell: `. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh`
 
-**Prompt glyphs are tofu.** kitty needs `Maple Mono NF`, which this repo already
-sets. Restart kitty so fontconfig is re-read.
+**`compgen: command not found` during an AUR build.** A nix bash won on PATH.
+`readlink -f "$(command -v bash)"` should be `/usr/bin/bash`. If not:
+`PATH=/usr/bin:$PATH makepkg -si`
 
-**`ls` errors on a filename.** eza wants `--icons=always`, with the `=`. Space
-separated makes the value a path argument.
+**`--check` reports a `*-debug` package.** `sudo pacman -Rns paru-bin-debug`
 
-**Clipboard does nothing in WSL.** `pbcopy`/`pbpaste` prefer WSLg's
-`wl-copy`/`wl-paste` and fall back to `clip.exe`/`powershell.exe` by absolute
-path, since `appendWindowsPath=false` takes them off PATH. Neovim autodetects
-wl-clipboard when `WAYLAND_DISPLAY` is set; without WSLg, point `g:clipboard` at
-`pbcopy`/`pbpaste`.
+**Clipboard does nothing in WSL.** `pbcopy`/`pbpaste` are the wrappers. They
+prefer WSLg, then fall back to `clip.exe`.
 
-**No hardware video decode.** This laptop is an AMD Carrizo APU, but the old
-package set installed only Intel VA-API drivers. `mesa` is now the VA-API
-provider (it `replaces libva-mesa-driver`). One-time cleanup of the leftovers:
-
-```bash
-sudo pacman -Rns vulkan-intel vulkan-nouveau intel-media-driver \
-  libva-intel-driver xf86-video-nouveau xf86-video-ati
-sudo pacman -S --asexplicit mesa
-vainfo   # expect radeonsi entries; needs libva-utils
-```
-
-`bootstrap.sh --check` reports these as installed-but-undeclared, but never
-removes undeclared packages automatically.
-
-**Which Nix is this?** `install.determinate.systems` installs *Determinate Nix*,
-not upstream — `nix --version` reports e.g. `nix (Determinate Nix 3.21.9) 2.34.8`.
-The `--determinate` flag toggles enterprise features and does **not** select the
-distribution, so omitting it does not get you upstream. Everything here works
-identically on either; use the nixos.org installer if you want strictly upstream.
-
-**`compgen: command not found` during an AUR build.** nixpkgs’ non-interactive
-`bash` is built with `--disable-readline`, which also disables programmable
-completion — so it has no `compgen`, and makepkg’s `config.sh` dies inside
-fakeroot. Happens when a nix `bash` wins on PATH, most easily by running things
-from `~/.mico` while direnv has the devShell loaded.
-
-```bash
-readlink -f "$(command -v bash)"   # expect /usr/bin/bash
-```
-
-Resolve the symlink rather than reading `which -a` directly: `.envrc` shadows
-`bash` with `.direnv/bin/bash`, which points at `/usr/bin/bash`, so the raw path
-looks wrong while being correct. `IN_NIX_SHELL=impure` inside this repo is
-expected and fine.
-
-Three layers guard against it: `.envrc` shadows `bash` with `/usr/bin/bash` via
-`.direnv/bin`, `bootstrap.sh` prepends `/usr/bin` for makepkg and paru, and
-preflight warns if `bash` still resolves elsewhere. For a manual build outside
-all of that:
-
-```bash
-PATH=/usr/bin:$PATH makepkg -si
-```
-
-**`--check` reports a `*-debug` package.** A makepkg by-product: Arch defaults to
-`OPTIONS=(debug)`, and `makepkg -si` installs every artifact it built. bootstrap
-now builds and installs separately so only non-debug packages land, but an
-already-installed one has to go by hand:
-
-```bash
-sudo pacman -Rns paru-bin-debug
-```
-
-**`pacman -Rns git` refuses.** Something depends on it. Current bootstrap tries
-migrated packages one at a time and leaves dependency-blocked ones installed and
-explicit; nix still wins through PATH ordering. Do not force-remove or demote a
-package that pacman needs.
-
-**Don't** put `gcc` in the nix profile (breaks `makepkg`), make `zsh` a nix
-package (a store login shell can lock you out after GC), or use
-`nix profile install` (invisible to this repo, drifts between machines).
-
-## Gotchas worth knowing
-
-- `programs.eza` is not enabled on purpose — its zsh integration defines
-  `shellAliases.ls` and collides with ours, which fails evaluation outright.
-- User GC is `nix.gc.automatic`. The options live under `nix.gc.*` but are
-  declared in `modules/services/nix-gc.nix` upstream, which is easy to miss when
-  searching by file path. Upstream only collects the *current user's* profiles, so
-  the root/system profile has a separate `/etc/systemd/system` timer written by
-  `bootstrap.sh` — and that one does **not** roll back with a generation.
-- `auto-optimise-store` is a daemon setting needing root, so `bootstrap.sh` does it.
-- `mise install` runs on every `hms` as an activation hook. Skip with
-  `MICO_SKIP_MISE_INSTALL=1`. Python is pinned to a concrete patch because a
-  stale mise version cache once passed the fuzzy `3.13` selector directly to
-  python-build, which only accepts definitions such as `3.13.15`.
-- **Ctrl-R is atuin**, not fzf. fzf's history widget is deliberately blanked
-  (`historyWidget.command = ""`), which is the documented way to hand Ctrl-R to a
-  history manager. Up/Down stay on zsh-history-substring-search via
-  `--disable-up-arrow`.
-- **Tab completion is fzf-tab.** It is sourced at `initContent` order 600, which
-  is deliberate: after compinit (570) but before home-manager sources
-  zsh-autosuggestions (700). Declaring it under `programs.zsh.plugins` would put
-  it at 900 and it would silently do nothing.
-- Atuin history is local-only. Do **not** sync `~/.local/share/atuin` with
-  Syncthing or similar — it is a live SQLite database and file-syncing corrupts
-  it. Use atuin's own encrypted sync if you want cross-machine history.
-- `~/.zshrc` is a read-only store symlink. Editing it does nothing.
-- **btop cannot save settings changed inside the app.** `btop.conf` is generated
-  from `programs.btop.settings`, so it is a read-only store symlink and btop's
-  write-on-exit fails. Same trade-off as `~/.zshrc`: change it in `home/tools.nix`
-  and run `hms`. Note btop normalises `True` to `true` when it *can* write, which
-  is why the generated capitalisation is harmless - verified that btop keeps our
-  values rather than reverting to its defaults.
-- `dotDir` is pinned to `$HOME`; the default moves to `$XDG_CONFIG_HOME/zsh` at
-  stateVersion 26.05.
-- Nothing secret goes in this repo, it's public. Git identity lives in untracked
-  `~/.gitconfig.local`.
-- zellij runs one persistent session named `main`. A wedged session follows you
-  between terminals until `zellij kill-session main`.
-- `hosts/wsl.nix` is built by CI but otherwise untested — CI proves it compiles,
-  not that wsl2-ssh-agent or the clipboard fallbacks work.
+**Prompt glyphs are tofu.** Restart kitty. It already has Maple Mono NF.
 
 ## Layout
 
 ```
-.github/workflows/   CI: builds both hosts on push
-ci/lint.sh           lint runner, works locally too
-statix.toml          lint exclusions that clash with module conventions
-bootstrap.sh         machine setup, --check audits pacman drift
-flake.nix            nixpkgs unstable + home-manager master, devShell, checks
-home/                zsh, starship, git, fzf, mise, tools
+bootstrap.sh         first boot, and what `mico bootstrap` runs
+scripts/mico         the command
+flake.nix            nixpkgs + home-manager
+home/                zsh, git, tools, packages
 hosts/               arch.nix, wsl.nix
-config/              verbatim: zellij, kitty, bat theme
-packages/            repo lists: common, arch, wsl, migrated
-                     AUR lists: aur-common, aur-arch, aur-wsl
-.config/nvim         neovim config (imported with git subtree, history intact)
-stylua.toml          Lua formatting
-selene.toml, vim.yml Lua linting + the Neovim std library
+packages/            pacman and AUR lists
+config/              zellij, kitty, bat, podman
+.config/nvim         neovim
 ```

@@ -258,7 +258,7 @@ step "Preflight"
 
 if [[ $REPO != "$HOME/.mico" ]]; then
   warn "repo is at $REPO but the flake expects ~/.mico"
-  warn "the nvim symlink and the hms alias hardcode ~/.mico, so move it or"
+  warn "the nvim symlink and the mico wrapper hardcode ~/.mico, so move it or"
   warn "update home/common.nix and hosts/*.nix"
 fi
 
@@ -840,7 +840,7 @@ else
     skip "syncthing is not configured on WSL by design"
   elif ! systemctl --user list-unit-files syncthing.service &>/dev/null \
     || [[ -z "$(systemctl --user list-unit-files --no-legend syncthing.service 2>/dev/null)" ]]; then
-    warn "syncthing.service missing - run 'hms' first, home-manager creates it"
+    warn "syncthing.service missing - run 'mico switch' first, home-manager creates it"
   elif systemctl --user is-active syncthing.service &>/dev/null; then
     ok "syncthing.service running (GUI at http://127.0.0.1:8384)"
   else
@@ -970,7 +970,7 @@ cat <<EOF
 
   Host:      $HOST
   Flake:     $REPO#$HOST
-  Switch:    hms
+  Switch:    mico switch
 
   Verify with:
 

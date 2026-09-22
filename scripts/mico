@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="${MICO_REPO:-}"
+if [[ -z $REPO ]]; then
+  REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+
+detect_host() {
+  if [[ -n ${WSL_DISTRO_NAME:-} ]] \
+    || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
+    echo wsl
+  else
+    echo arch
+  fi
+}
+
+HOST="${MICO_HOST:-}"
+[[ -n $HOST ]] || HOST="$(detect_host)"
+
+usage() {
+  cat <<EOF
+mico - this machine
+
+  mico switch              apply nix home config (old hms)
+  mico update              bump flake.lock, then switch
+  mico bootstrap           first boot / re-run machine setup
+  mico install             open packages/ in nvim
+  mico install [pkgs...]   add to a list, then bootstrap
+  mico check               pacman vs the lists, read-only
+  mico lint                format and lint this repo
+
+  CLI tool:       pkgconf   then mico switch
+  system package: mico install mesa
+  AUR package:    mico install --aur something
+  this host only: mico install --local hyprland
+  try first:      , cowsay hello
+
+bootstrap flags: --dry-run --yes --host wsl --no-pacman --no-remove
+EOF
+}
+
+cmd_switch() {
+  if command -v nh >/dev/null; then
+    nh home switch "$REPO" -c "$HOST" -b backup
+  elif command -v home-manager >/dev/null; then
+    home-manager switch --flake "$REPO#$HOST" -b backup
+  else
+    nix run github:nix-community/home-manager -- \
+      switch --flake "$REPO#$HOST" -b backup
+  fi
+  zsh -n "$HOME/.zshrc"
+  if [[ -t 1 ]]; then
+    exec zsh
+  fi
+}
+
+cmd_update() {
+  (
+    cd "$REPO"
+    nix flake update
+  )
+  cmd_switch
+}
+
+pkg_lines() {
+  sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$1"
+}
+
+is_declared() {
+  local p="$1" f
+  for f in "$REPO/packages"/*.txt; do
+    pkg_lines "$f" | grep -qx -- "$p" && return 0
+  done
+  return 1
+}
+
+cmd_install() {
+  local aur=0 local_list=0
+  local pkgs=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --aur)
+      aur=1
+      shift
+      ;;
+    --local)
+      local_list=1
+      shift
+      ;;
+    -h | --help)
+      usage
+      return 0
+      ;;
+    --*)
+      printf 'unknown flag: %s\n' "$1" >&2
+      printf 'install flags: --aur --local\n' >&2
+      return 1
+      ;;
+    *)
+      pkgs+=("$1")
+      shift
+      ;;
+    esac
+  done
+
+  if ((${#pkgs[@]} == 0)); then
+    exec "${EDITOR:-nvim}" "$REPO/packages"
+  fi
+
+  local dest
+  if ((aur)); then
+    if ((local_list)); then
+      dest="$REPO/packages/aur-$HOST.txt"
+    else
+      dest="$REPO/packages/aur-common.txt"
+    fi
+  elif ((local_list)); then
+    dest="$REPO/packages/$HOST.txt"
+  else
+    dest="$REPO/packages/common.txt"
+  fi
+
+  local p added=0
+  for p in "${pkgs[@]}"; do
+    if [[ ! $p =~ ^[A-Za-z0-9][A-Za-z0-9@._+-]*$ ]]; then
+      printf 'not a package name: %s\n' "$p" >&2
+      return 1
+    fi
+    if is_declared "$p"; then
+      printf 'already declared: %s\n' "$p"
+      continue
+    fi
+    printf '%s\n' "$p" >>"$dest"
+    printf 'added %s to %s\n' "$p" "${dest#"$REPO"/}"
+    added=1
+  done
+
+  if ((added == 0)); then
+    printf 'nothing new to install\n'
+    return 0
+  fi
+
+  exec "$REPO/bootstrap.sh" --host "$HOST"
+}
+
+case "${1:-}" in
+"" | help | -h | --help)
+  usage
+  ;;
+switch)
+  shift
+  cmd_switch
+  ;;
+update)
+  shift
+  cmd_update
+  ;;
+bootstrap)
+  shift
+  exec "$REPO/bootstrap.sh" --host "$HOST" "$@"
+  ;;
+install)
+  shift
+  cmd_install "$@"
+  ;;
+check)
+  shift
+  exec "$REPO/bootstrap.sh" --check --host "$HOST" "$@"
+  ;;
+lint)
+  shift
+  exec "$REPO/ci/lint.sh" "$@"
+  ;;
+*)
+  printf 'unknown command: %s\n\n' "$1" >&2
+  usage >&2
+  exit 1
+  ;;
+esac

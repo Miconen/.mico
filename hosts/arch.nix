@@ -15,7 +15,7 @@
 
   # keychain handles ssh-agent here. It is enabled by default in home/tools.nix;
   # hosts/wsl.nix turns it off in favour of wsl2-ssh-agent.
-  # The hms alias is built from hostName in home/common.nix.
+  # The mico wrapper is pinned to this hostName in home/common.nix.
 
   # kitty's binary comes from pacman (GUI), but its config is managed here so
   # the Nerd Font and Catppuccin theme are not a manual post-install step.
@@ -36,7 +36,7 @@
   # Pairing is declarative, not click-through: put a device's ID in `devices` and
   # activate. Do NOT accept devices or folders in the web UI - overrideDevices and
   # overrideFolders both default to true, so anything added by hand is deleted on
-  # the next `hms`.
+  # the next `mico switch`.
   #
   # This machine's own device ID does not need declaring. Verified against a live
   # instance: submitting a folder that lists only the phone came back normalised

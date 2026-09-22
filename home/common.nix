@@ -79,6 +79,12 @@
       # editor (config stays in the nvim submodule, see below)
       neovim
 
+      (writeShellScriptBin "mico" ''
+        export MICO_REPO=${lib.escapeShellArg repoPath}
+        export MICO_HOST=${lib.escapeShellArg hostName}
+        exec bash "$MICO_REPO/scripts/mico" "$@"
+      '')
+
       # terminal font, needed for starship's Catppuccin Powerline glyphs
       maple-mono.NF
 
@@ -146,7 +152,7 @@
   # a valid .zshrc - home-manager never parses the zsh it writes - so without
   # this guard a typo in zsh.nix would exec you straight into a broken shell and
   # take away the shell you needed to fix it.
-  programs.zsh.shellAliases.hms = "nh home switch ${repoPath} -c ${hostName} -b backup && zsh -n ~/.zshrc && exec zsh";
+  programs.zsh.shellAliases.hms = "mico switch";
 
   xdg.enable = true;
 

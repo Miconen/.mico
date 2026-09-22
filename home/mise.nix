@@ -40,7 +40,7 @@
 
   # Declaring a tool does not fetch it - `mise ls` would show "(missing)" until
   # someone remembers to run `mise install`. This makes the fetch part of
-  # activation, so `hms` alone is sufficient and there is no manual step.
+  # activation, so `mico switch` is sufficient and there is no manual step.
   #
   # Runs after writeBoundary so ~/.config/mise/config.toml is already in place.
   # It is a fast no-op once everything is installed, and deliberately non-fatal:

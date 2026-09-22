@@ -30,7 +30,7 @@
       username = "miso";
 
       # Single source of truth for where this repo is checked out. Consumed by
-      # the nvim out-of-store symlink, the `hms` alias and the editing aliases,
+      # the nvim out-of-store symlink, the mico wrapper, and the editing aliases,
       # so relocating the repo is a one-line change here.
       repoPath = "/home/${username}/.mico";
 
@@ -42,8 +42,8 @@
         config.allowUnfree = true;
       };
 
-      # hostName is passed through so common.nix can build the `hms` alias
-      # itself, instead of each host file repeating it.
+      # hostName is passed through so common.nix can pin the mico wrapper
+      # to this host, instead of each host file repeating it.
       mkHome =
         hostName: hostModule:
         home-manager.lib.homeManagerConfiguration {
