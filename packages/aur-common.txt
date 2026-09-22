@@ -3,3 +3,6 @@
 # paru itself is bootstrapped separately by bootstrap.sh and deliberately does
 # not live here: an existing source-built `paru` satisfies the helper role, while
 # declaring `paru-bin` here would try to install a conflicting package.
+
+# Development
+k6

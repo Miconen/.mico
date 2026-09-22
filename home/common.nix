@@ -63,6 +63,8 @@
       # git / dev
       gh
       opencode
+      claude-code
+      cloc
       lazygit
       lazydocker
       # Routes staged changes into the right commit of a stack automatically.
