@@ -10,6 +10,7 @@ let
   # `powershell.exe` are NOT on PATH.
   clipExe = "/mnt/c/Windows/System32/clip.exe";
   psExe = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
+  explorerExe = "/mnt/c/Windows/explorer.exe";
 
   # Prefer WSLg's Wayland clipboard (Windows 11, shares the Windows clipboard),
   # fall back to Windows interop so this also works on WSL1 / Windows 10 / WSLg
@@ -28,6 +29,27 @@ let
     # PowerShell emits CRLF; strip the CR or every paste gains ^M.
     ${psExe} -NoProfile -NoLogo -Command Get-Clipboard | tr -d '\r'
   '';
+
+  # wslu is unmaintained upstream; this replaces just the piece of it CLI
+  # tools actually need (gh auth login, git OAuth flows, `cargo doc --open`,
+  # Python's webbrowser module - anything that calls `xdg-open` or respects
+  # $BROWSER) by handing the target to Windows via explorer.exe. URLs are
+  # passed through as-is; anything else is assumed to be a local path and
+  # translated to a Windows path first, so a plain `xdg-open ./file.pdf`
+  # also opens in the Windows-associated app.
+  xdgOpen = pkgs.writeShellScriptBin "xdg-open" ''
+    set -euo pipefail
+    target="$1"
+    case "$target" in
+      http://*|https://*|mailto:*) ;;
+      *) target="$(wslpath -w -- "$target")" ;;
+    esac
+    # explorer.exe is documented to return exit code 1 on normal success, so
+    # a passed-through exit code would make every caller above think opening
+    # the link failed even though it worked.
+    ${explorerExe} "$target" || true
+    exit 0
+  '';
 in
 {
   # ---------------------------------------------------------------------------
@@ -44,6 +66,11 @@ in
   #   appendWindowsPath=false   # optional, see README tradeoff
   #
   # Then `wsl --shutdown` before installing nix.
+  #
+  # Browser: there is no GUI browser here (that's the Arch laptop's job via
+  # Hyprland + firefox). $BROWSER/xdg-open instead hand links off to Windows
+  # via the xdg-open wrapper below, replacing wslu's wslview (unmaintained
+  # upstream).
   # ---------------------------------------------------------------------------
 
   # WSL uses wsl2-ssh-agent to bridge to the Windows ssh-agent, so keychain
@@ -64,7 +91,13 @@ in
   home.packages = [
     pbcopy
     pbpaste
+    xdgOpen
   ];
+
+  # gh auth login, git OAuth flows, `cargo doc --open`, Python's webbrowser
+  # module, etc. all look here (or fall back to calling `xdg-open` directly,
+  # which xdgOpen above also provides on PATH).
+  home.sessionVariables.BROWSER = "xdg-open";
 
   programs.zsh.initContent = lib.mkMerge [
     (lib.mkOrder 550 ''
