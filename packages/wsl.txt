@@ -10,6 +10,16 @@ vulkan-dzn
 vulkan-icd-loader
 mesa
 
+# Local LLM server. pacman, not nix: it is a system service, and nixpkgs'
+# ollama-cuda is unfree, so it is not in the binary cache and would build
+# CUDA from source. ollama-cuda pulls in the `cuda` toolkit (~5G) and talks
+# to the RTX 3070 through WSL's /usr/lib/wsl/lib/libcuda.so passthrough - no
+# Linux NVIDIA driver is installed or needed. The laptop does not get this:
+# 7G of RAM and a Carrizo APU cannot run anything useful.
+# ollama.service is enabled by bootstrap.sh; it listens on 127.0.0.1:11434.
+ollama
+ollama-cuda
+
 # AUR build dependency. Keep makepkg on Arch's patched Go toolchain; mise's
 # upstream Go carries a different build suffix and cannot compile Arch's stdlib.
 go

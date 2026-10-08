@@ -885,7 +885,9 @@ if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
   skip "systemd not running"
 elif [[ $HOST == "wsl" ]]; then
   # No physical disk to trim or scrub, and WSL manages its own storage.
-  skip "not applicable inside WSL"
+  skip "disk maintenance timers not applicable inside WSL"
+
+  enable_system_unit ollama.service "local LLM server on 127.0.0.1:11434"
 else
   # Discard unused SSD blocks. Without this, sustained write performance on NVMe
   # degrades over time.
