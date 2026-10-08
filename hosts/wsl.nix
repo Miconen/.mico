@@ -11,6 +11,7 @@ let
   clipExe = "/mnt/c/Windows/System32/clip.exe";
   psExe = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
   explorerExe = "/mnt/c/Windows/explorer.exe";
+  winChromeExe = "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe";
 
   # Prefer WSLg's Wayland clipboard (Windows 11, shares the Windows clipboard),
   # fall back to Windows interop so this also works on WSL1 / Windows 10 / WSLg
@@ -50,6 +51,21 @@ let
     ${explorerExe} "$target" || true
     exit 0
   '';
+
+  # Launches Windows-native Chrome with CDP enabled, for Playwright's
+  # connectOverCDP() instead of a Linux GUI browser (there is none here, see
+  # the Browser note below). A separate profile dir is required - Chrome
+  # silently ignores --remote-debugging-port if an instance is already
+  # running against the default profile.
+  winChromeDebug = pkgs.writeShellScriptBin "win-chrome-debug" ''
+    set -euo pipefail
+    mkdir -p "$HOME/.cache/win-chrome-debug-profile"
+    profile="$(wslpath -w "$HOME/.cache/win-chrome-debug-profile")"
+    exec "${winChromeExe}" \
+      --remote-debugging-port=9222 \
+      --user-data-dir="$profile" \
+      "$@"
+  '';
 in
 {
   # ---------------------------------------------------------------------------
@@ -70,7 +86,9 @@ in
   # Browser: there is no GUI browser here (that's the Arch laptop's job via
   # Hyprland + firefox). $BROWSER/xdg-open instead hand links off to Windows
   # via the xdg-open wrapper below, replacing wslu's wslview (unmaintained
-  # upstream).
+  # upstream). For headed Playwright runs, win-chrome-debug launches
+  # Windows-native Chrome with a CDP port instead of installing a Linux
+  # Chromium/Firefox just for testing.
   # ---------------------------------------------------------------------------
 
   # WSL uses wsl2-ssh-agent to bridge to the Windows ssh-agent, so keychain
@@ -92,6 +110,7 @@ in
     pbcopy
     pbpaste
     xdgOpen
+    winChromeDebug
   ];
 
   # gh auth login, git OAuth flows, `cargo doc --open`, Python's webbrowser
@@ -105,6 +124,15 @@ in
       # because it is a system integration binary living in /usr/sbin.
       if [[ -o interactive && -x /usr/sbin/wsl2-ssh-agent ]]; then
         eval "$(/usr/sbin/wsl2-ssh-agent)"
+      fi
+    '')
+
+    (lib.mkOrder 900 ''
+      # Windows-native Chrome's CDP port only binds to Windows' loopback, which
+      # NAT-mode WSL cannot reach. A Windows-side portproxy (0.0.0.0:9223 ->
+      # 127.0.0.1:9222, see README) exposes it on the WSL gateway address.
+      if [[ -o interactive ]]; then
+        export PW_CDP_URL="http://$(ip route show default | awk '{print $3; exit}'):9223"
       fi
     '')
 

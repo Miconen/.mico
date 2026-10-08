@@ -17,3 +17,25 @@ go
 # Was in the previous WSL manifest; drop it if you no longer need a local
 # database server.
 postgresql
+
+# Headed Chromium/Playwright runtime libs. Playwright's own
+# `--with-deps` installer only knows apt/dnf, so on Arch these were never
+# pulled in; headless mode worked (it uses the dependency-light
+# headless_shell binary) but headed mode failed to launch full chrome with
+# "error while loading shared libraries: libnspr4.so: ...".
+nss
+nspr
+atk
+at-spi2-core
+libcups
+libdrm
+libxkbcommon
+libxcomposite
+libxdamage
+libxfixes
+libxrandr
+alsa-lib
+pango
+cairo
+gtk3
+gdk-pixbuf2

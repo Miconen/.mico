@@ -175,6 +175,23 @@ home-manager generations
 **Clipboard does nothing in WSL.** `pbcopy`/`pbpaste` are the wrappers. They
 prefer WSLg, then fall back to `clip.exe`.
 
+**Playwright headed mode fails with `libnspr4.so: cannot open shared object
+file`.** Headless mode's `headless_shell` binary has few dependencies; headed
+mode needs the full `chrome` binary's runtime libs, added to
+`packages/wsl.txt`. Re-run `mico bootstrap` after pulling.
+
+**Playwright against Windows Chrome (`win-chrome-debug`) can't connect.** Chrome's
+CDP port only binds to Windows' loopback, unreachable from NAT-mode WSL. One-time,
+in an elevated PowerShell:
+
+```powershell
+netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=9223 connectaddress=127.0.0.1 connectport=9222
+New-NetFirewallRule -DisplayName "WSL Chrome CDP 9223" -Direction Inbound -Protocol TCP -LocalPort 9223 -RemoteAddress 172.16.0.0/12 -Action Allow
+```
+
+The shell exports `PW_CDP_URL` pointing at that. Don't use mirrored networking mode:
+it makes loopback-only servers (Vite) unreachable from Windows browsers.
+
 **Prompt glyphs are tofu.** Restart kitty. It already has Maple Mono NF.
 
 ## Layout
