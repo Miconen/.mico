@@ -195,14 +195,24 @@
           autoload -Uz add-zsh-hook
 
           _mico_zellij_tab_name() {
-            local root name
+            local root name tab_id
             root="$(git rev-parse --show-toplevel 2>/dev/null)" || root="$PWD"
             name="''${root:t}"
             [[ "$PWD" == "$HOME" ]] && name="~"
             # This runs on every cd, so skip the subprocess when nothing changed.
             [[ "$name" == "$_MICO_ZELLIJ_TAB" ]] && return 0
+            # Plain `rename-tab` renames the FOCUSED tab, not this shell's tab, so
+            # a shell starting in the background (session resurrection restores
+            # every pane at once, or a tab opened while focus is elsewhere) would
+            # rename whichever tab you happen to be looking at. Resolve our own
+            # tab from $ZELLIJ_PANE_ID instead. Looked up each time rather than
+            # cached because panes can be moved between tabs.
+            tab_id="$(zellij action list-panes --json --tab 2>/dev/null \
+              | ${pkgs.jq}/bin/jq -r --argjson id "$ZELLIJ_PANE_ID" \
+                  '.[] | select(.is_plugin == false and .id == $id) | .tab_id')"
+            [[ -n "$tab_id" ]] || return 0
             _MICO_ZELLIJ_TAB="$name"
-            zellij action rename-tab "$name" 2>/dev/null
+            zellij action rename-tab --tab-id "$tab_id" "$name" 2>/dev/null
           }
 
           add-zsh-hook chpwd _mico_zellij_tab_name
