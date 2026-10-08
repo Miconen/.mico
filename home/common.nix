@@ -15,6 +15,7 @@
     ./fzf.nix
     ./mise.nix
     ./tools.nix
+    ./claude.nix
   ];
 
   home = {

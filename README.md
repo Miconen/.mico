@@ -203,6 +203,6 @@ flake.nix            nixpkgs + home-manager
 home/                zsh, git, tools, packages
 hosts/               arch.nix, wsl.nix
 packages/            pacman and AUR lists
-config/              zellij, kitty, bat, podman
+config/              zellij, kitty, bat, podman, claude skills
 .config/nvim         neovim
 ```
