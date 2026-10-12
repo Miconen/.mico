@@ -75,6 +75,8 @@
       difftastic
       # jq covers JSON; this is the YAML/TOML equivalent. Provides `yq`.
       yq-go
+      # Live reload for Go apps: rebuilds and restarts on file changes.
+      air
 
       # terminal multiplexer (config is managed verbatim, see tools.nix)
       zellij
