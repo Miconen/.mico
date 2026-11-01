@@ -1,8 +1,5 @@
-# AUR packages for every host. Installed with paru, not pacman.
-#
-# paru itself is bootstrapped separately by bootstrap.sh and deliberately does
-# not live here: an existing source-built `paru` satisfies the helper role, while
-# declaring `paru-bin` here would try to install a conflicting package.
+# AUR packages for every host (installed with paru).
+# paru itself is bootstrapped separately; listing paru-bin here would conflict.
 
 # Development
 k6

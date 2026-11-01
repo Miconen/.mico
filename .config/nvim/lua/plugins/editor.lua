@@ -1,31 +1,22 @@
--- plugins/editor.lua
-
 return {
-	-- Detect tabstop/shiftwidth automatically
 	"tpope/vim-sleuth",
 
-	-- Mini.nvim collection
 	{
 		"echasnovski/mini.nvim",
 		version = false,
 		config = function()
-			-- Better text objects: va), yinq, ci'
 			require("mini.ai").setup({ n_lines = 500 })
 
-			-- Surround: saiw), sd', sr)'
 			require("mini.surround").setup({})
 
-			-- Icons (used by statusline and other mini modules)
 			require("mini.icons").setup({})
 
-			-- File explorer
 			require("mini.files").setup({
 				options = {
 					use_as_default_explorer = true,
 				},
 			})
 
-			-- Git diff signs in the gutter + overlay
 			require("mini.diff").setup({
 				view = {
 					style = "sign",
@@ -33,17 +24,14 @@ return {
 				},
 			})
 
-			-- Git blame / log integration
 			require("mini.git").setup({})
 		end,
 	},
 
-	-- Autopairs
 	{
 		"windwp/nvim-autopairs",
 		event = "InsertEnter",
 		opts = {},
-		-- blink.cmp integration is handled in plugins/lsp.lua
 	},
 
 	{
@@ -76,13 +64,7 @@ return {
 		},
 	},
 
-	-- Project-wide find and replace in a buffer. Driven by ripgrep, which is
-	-- already declared in home/common.nix (grug-far wants rg >= 14).
-	--
-	-- Binds live here rather than in keymaps/search.lua so the plugin loads on
-	-- first use; the <leader>s group label is registered there.
-	--
-	-- <leader>sr is taken by Snacks recent files, hence sR.
+	-- Needs ripgrep >= 14.
 	{
 		"MagicDuck/grug-far.nvim",
 		cmd = { "GrugFar", "GrugFarWithin" },
@@ -99,8 +81,6 @@ return {
 				"<leader>sR",
 				mode = "x",
 				function()
-					-- auto-detect: a linewise selection confines the replace to that
-					-- range, a charwise one pre-fills the search input with it.
 					require("grug-far").open({ visualSelectionUsage = "auto-detect" })
 				end,
 				desc = "Search and replace in selection",
@@ -115,8 +95,6 @@ return {
 		},
 	},
 
-	-- Simple & visual snippet manager. Allows turning visual selections or snippets
-	-- into reusable VSCode-style JSON snippets saved in ~/.config/nvim/snippets.
 	{
 		"chrisgrieser/nvim-scissors",
 		dependencies = { "folke/snacks.nvim" },

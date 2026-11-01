@@ -1,5 +1,4 @@
 # AUR packages for WSL only.
 
-# Bridges SSH_AUTH_SOCK to the Windows ssh-agent. hosts/wsl.nix evals this at
-# shell startup and disables keychain in its favour.
+# Bridges SSH_AUTH_SOCK to the Windows ssh-agent (replaces keychain in hosts/wsl.nix).
 wsl2-ssh-agent

@@ -1,27 +1,10 @@
-// Managed by home-manager (see home/tools.nix). Edit it in ~/.mico, not here.
-//
-// Referenced by `default_layout "default"` in config.kdl, which is what the
-// shell's `zellij attach --create main` picks up - `attach` cannot take --layout.
-//
-// Two things here are load-bearing and were learned the hard way:
-//
-// 1. `default_tab_template`, NOT `tab_template name="ui"`. A named template only
-//    applies to tabs written out in this file. Tabs you create at runtime use
-//    zellij's `new_tab_template`, which only `default_tab_template` populates.
-//    With a named template, `zellij action dump-layout` on a live session showed
-//    `new_tab_template { }` - empty - which is exactly why new tabs had no bar.
-//
-// 2. Everything lives inside the top-level `layout` node, including the swap
-//    layouts. The flat form printed by `zellij setup --dump-swap-layout` is a
-//    different schema, for standalone .swap.kdl files.
-//
-// Verified by starting a background session and dumping its live layout, not by
-// `zellij setup --check` - that parser is more permissive and accepted a layout
-// which a real session start rejected.
+// Lessons learned (verify with a live session's `zellij action dump-layout`;
+// `zellij setup --check` is more permissive than a real session start):
+// - Use default_tab_template, not a named template: only it populates the
+//   new_tab_template that runtime-created tabs use.
+// - Swap layouts must live inside `layout`; the --dump-swap-layout form is for
+//   standalone .swap.kdl files.
 layout {
-  // compact-bar instead of zellij's default tab-bar + status-bar pair, so the
-  // UI costs one row rather than two. The bare `tab` nodes below, including the
-  // ones inside the swap layouts, all inherit this.
   default_tab_template {
     pane size=1 borderless=true {
       plugin location="zellij:compact-bar"
@@ -31,10 +14,7 @@ layout {
 
   tab
 
-  // Swap layouts, cycled with Alt-, and Alt-. (see config.kdl for why not
-  // Alt-[ / Alt-]). These are zellij's own defaults, with `ui` replaced by bare
-  // `tab` so they pick up default_tab_template rather than needing a duplicate
-  // template definition.
+  // zellij's default swap layouts, with `ui` replaced by bare `tab`.
   swap_tiled_layout name="vertical" {
     tab max_panes=5 {
       pane split_direction="vertical" {

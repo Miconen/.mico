@@ -27,9 +27,6 @@ DO_REMOVE=1
 DRY=0
 CHECK_ONLY=0
 
-# ---------------------------------------------------------------------------
-# output helpers
-# ---------------------------------------------------------------------------
 if [[ -t 1 ]]; then
   C_RESET=$'\033[0m'
   C_BOLD=$'\033[1m'
@@ -72,14 +69,10 @@ confirm() {
 }
 
 read_list() {
-  # strips comments and blank lines
   [[ -f $1 ]] || return 0
   sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$1"
 }
 
-# ---------------------------------------------------------------------------
-# argument parsing
-# ---------------------------------------------------------------------------
 while [[ $# -gt 0 ]]; do
   case "$1" in
   --host)
@@ -118,9 +111,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ---------------------------------------------------------------------------
-# host detection
-# ---------------------------------------------------------------------------
 detect_host() {
   if [[ -n ${WSL_DISTRO_NAME:-} ]] \
     || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
@@ -134,11 +124,7 @@ detect_host() {
 [[ $HOST == "arch" || $HOST == "wsl" ]] \
   || die "host must be 'arch' or 'wsl', got '$HOST'"
 
-# ---------------------------------------------------------------------------
-# --check: report drift between packages/*.txt and what pacman actually has.
-# Read-only, needs no sudo, exits 1 if anything is out of sync. This is the
-# useful half of the old backup-package-list timer, without the dump.
-# ---------------------------------------------------------------------------
+# --check: report pacman drift. Read-only, no sudo.
 if ((CHECK_ONLY)); then
   step "Pacman drift for host '$HOST'"
 
@@ -148,12 +134,9 @@ if ((CHECK_ONLY)); then
     {
       read_list "$REPO/packages/common.txt"
       read_list "$REPO/packages/$HOST.txt"
-      # AUR packages show up in `pacman -Qqe` like anything else, so they have to
-      # count as declared or they would be reported as drift forever.
       read_list "$REPO/packages/aur-common.txt"
       read_list "$REPO/packages/aur-$HOST.txt"
-      # paru/paru-bin is bootstrapped as infrastructure rather than declared in
-      # aur-common.txt. Treat whichever provider is installed as managed.
+      # paru is bootstrapped, not declared.
       command -v paru >/dev/null && pacman -Qq paru 2>/dev/null || true
       command -v paru >/dev/null && pacman -Qq paru-bin 2>/dev/null || true
     } | sort -u
@@ -172,10 +155,7 @@ if ((CHECK_ONLY)); then
 
   drift=0
 
-  # Declared packages split three ways: absent, present only as somebody else's
-  # dependency, or properly explicit. The middle case matters - a dependency-only
-  # package can be removed out from under you when its parent goes, so a
-  # declaration is not actually satisfied until the install reason is explicit.
+  # A dependency-only package can vanish with its parent, so it counts as drift.
   missing=()
   dep_only=()
   for p in "${declared[@]}"; do
@@ -202,7 +182,6 @@ if ((CHECK_ONLY)); then
     printf '      fix: sudo pacman -D --asexplicit %s\n' "${dep_only[*]}"
   fi
 
-  # explicitly installed but undeclared
   undeclared=()
   for p in "${explicit[@]}"; do
     in_list "$p" "${declared[@]}" && continue
@@ -214,7 +193,6 @@ if ((CHECK_ONLY)); then
     warn "installed explicitly but NOT declared (${#undeclared[@]}):"
     printf '      %s\n' "${undeclared[@]}"
     printf '      fix: add to packages/%s.txt, or pacman -Rns / -D --asdeps\n' "$HOST"
-    # -debug packages are makepkg by-products, never something you want declared.
     if printf '%s\n' "${undeclared[@]}" | grep -q -- '-debug$'; then
       printf '      note: *-debug entries are makepkg artifacts; remove them\n'
     fi
@@ -222,9 +200,6 @@ if ((CHECK_ONLY)); then
     ok "no undeclared explicit packages"
   fi
 
-  # moved to nix but pacman still has it. Explicit only: a migrated package that
-  # is merely somebody's dependency is not something you chose, and pacman would
-  # refuse to remove it anyway.
   stale=()
   for p in "${migrated[@]}"; do
     in_list "$p" "${explicit[@]}" && stale+=("$p")
@@ -249,9 +224,6 @@ fi
 step "Bootstrapping host '$HOST' from $REPO"
 ((DRY)) && warn "dry run - nothing will be changed"
 
-# ---------------------------------------------------------------------------
-# 0. preflight
-# ---------------------------------------------------------------------------
 step "Preflight"
 
 [[ -f "$REPO/flake.nix" ]] || die "no flake.nix in $REPO - is this the right directory?"
@@ -271,25 +243,15 @@ if ! command -v sudo >/dev/null; then
   die "sudo is required"
 fi
 
-# Warm the sudo timestamp once, so later phases do not each stop for a password.
 ((DRY)) || sudo -v
 
 ok "running as $(whoami), home $HOME"
 
-# makepkg (and therefore paru) needs bash's `compgen`, which nixpkgs'
-# non-interactive bash does not have: it is built with --disable-readline, and
-# bash disables programmable completion along with readline. If such a bash wins
-# on PATH, AUR builds fail with "compgen: command not found" inside fakeroot.
-#
-# The AUR phases below prepend /usr/bin to work around it, but warn here too,
-# because the same trap catches any manual makepkg or paru run. .envrc shadows
-# bash for this repo, so this should normally stay quiet.
+# nixpkgs' non-interactive bash has no `compgen`, which makepkg/paru need.
 bash_path="$(command -v bash || true)"
 bash_real=""
 [[ -n $bash_path ]] && bash_real="$(readlink -f "$bash_path" 2>/dev/null || echo "$bash_path")"
-# Resolve symlinks: .envrc deliberately shadows bash with .direnv/bin/bash, which
-# points AT /usr/bin/bash, and /bin is a symlink to /usr/bin on Arch. Comparing
-# the unresolved path would warn about the very fix that is working.
+# Resolved, because .envrc's shadow bash and /bin are symlinks to /usr/bin/bash.
 if [[ -n $bash_real && $bash_real != /usr/bin/bash ]]; then
   warn "bash on PATH resolves to $bash_real, not /usr/bin/bash"
   if [[ -n ${IN_NIX_SHELL:-} ]]; then
@@ -298,9 +260,6 @@ if [[ -n $bash_real && $bash_real != /usr/bin/bash ]]; then
   warn "that bash has no compgen, so manual makepkg/paru runs will fail"
 fi
 
-# ---------------------------------------------------------------------------
-# 1. btrfs subvolume for /nix (Arch laptop, before nix exists)
-# ---------------------------------------------------------------------------
 step "Store location"
 
 if [[ -e /nix ]]; then
@@ -308,24 +267,18 @@ if [[ -e /nix ]]; then
 elif ! command -v findmnt >/dev/null; then
   skip "findmnt unavailable, cannot detect filesystem"
 elif [[ "$(findmnt -no FSTYPE / 2>/dev/null)" == "btrfs" ]]; then
-  # btrfs snapshots are not recursive, so a nested subvolume keeps the store
-  # (many GB on unstable) out of any root snapshot.
+  # Snapshots are not recursive, so this keeps the store out of root snapshots.
   ok "root is btrfs - creating a dedicated subvolume for /nix"
   run sudo btrfs subvolume create /nix
 else
   skip "root is not btrfs, the installer will create a plain /nix"
 fi
 
-# ---------------------------------------------------------------------------
-# 2. install nix
-# ---------------------------------------------------------------------------
 step "Nix"
 
 nix_env() {
   local profile=/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-  # Must not be a trailing `[[ ... ]] && .` - that returns 1 when the profile is
-  # absent, and under `set -e` a bare call to this function would kill the
-  # script. Explicit `return 0`.
+  # Explicit return 0: a trailing `[[ ]] && .` would trip set -e.
   if [[ -e $profile ]]; then
     # shellcheck source=/dev/null
     . "$profile"
@@ -346,11 +299,7 @@ else
          then 'wsl --shutdown' from Windows, and re-run this script."
   fi
 
-  # NOTE: this endpoint installs *Determinate Nix* (their distribution, with
-  # determinate-nixd), not upstream Nix - verified by installing it and getting
-  # "nix (Determinate Nix 3.21.9) 2.34.8". The --determinate flag toggles their
-  # enterprise features, it is NOT what selects the distribution. For strictly
-  # upstream Nix, use the official installer from nixos.org instead.
+  # This endpoint installs Determinate Nix, not upstream Nix.
   ok "installing nix, multi-user (Determinate Nix distribution)"
   if ((DRY)); then
     warn "would run the Determinate nix-installer"
@@ -365,16 +314,12 @@ if ! ((DRY)) && ! command -v nix >/dev/null; then
   die "nix is installed but not on PATH. Open a new shell and re-run this script."
 fi
 
-# ---------------------------------------------------------------------------
-# 3. daemon-level nix settings that a flake cannot set
-# ---------------------------------------------------------------------------
 step "Nix daemon settings"
 
 if [[ -f /etc/nix/nix.conf ]] && grep -q '^auto-optimise-store' /etc/nix/nix.conf; then
   skip "auto-optimise-store already configured"
 else
-  # Store deduplication is a daemon setting requiring root, so home-manager
-  # cannot express it. Garbage collection itself is a user timer (home/nix-gc.nix).
+  # A root daemon setting, so home-manager cannot express it.
   ok "enabling auto-optimise-store"
   if ((DRY)); then
     warn "would append auto-optimise-store to /etc/nix/nix.conf"
@@ -384,20 +329,15 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 4. pacman: the system half of the split
-# ---------------------------------------------------------------------------
 step "System packages (pacman)"
 
 pacman_ready=0
-if ((!DO_PACMAN)); then
+if ((! DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found, not an Arch-based system"
 else
-  # A stale sync database can reference package versions already rotated off the
-  # mirrors (404). Arch does not support partial upgrades, so refresh and upgrade
-  # before resolving missing packages.
+  # Arch does not support partial upgrades, so upgrade before installing.
   ok "refreshing package databases and upgrading the system"
   pacman_ready=1
   if ! run sudo pacman -Syu --noconfirm; then
@@ -428,16 +368,11 @@ else
     ok "all ${#wanted[@]} declared system packages already installed"
   else
     ok "installing ${#missing[@]} missing: ${missing[*]}"
-    # --needed makes this safe to repeat. AUR packages are NOT handled here; they
-    # live in packages/aur-*.txt and are installed by paru in a later phase.
     run sudo pacman -S --needed --noconfirm -- "${missing[@]}" \
       || warn "some packages failed - check the names are in the official repos"
   fi
 
-  # A declared package that is only present as somebody else's dependency can be
-  # removed when that parent goes. `pacman -S --needed` will NOT fix this: it
-  # skips already-installed packages without touching the install reason, so the
-  # reason has to be set separately.
+  # `pacman -S --needed` does not change the install reason, so set it here.
   if ((pacman_ready)) && ((${#dep_only[@]})); then
     ok "marking ${#dep_only[@]} dependency-only as explicit: ${dep_only[*]}"
     run sudo pacman -D --asexplicit -- "${dep_only[@]}" \
@@ -445,19 +380,13 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 4d. pacman.conf niceties
-#     Two lines only, both idempotent. Already set on the current laptop, so this
-#     is really for a fresh machine.
-# ---------------------------------------------------------------------------
 step "pacman.conf"
 
-if ((!DO_PACMAN)); then
+if ((! DO_PACMAN)); then
   skip "--no-pacman given"
 elif [[ ! -f /etc/pacman.conf ]]; then
   skip "no /etc/pacman.conf"
 else
-  # `^Color` and `^ParallelDownloads` - the shipped file has both commented out.
   if grep -qE '^Color' /etc/pacman.conf; then
     skip "Color already enabled"
   elif ((DRY)); then
@@ -477,20 +406,12 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 4b. AUR helper
-#     paru is an AUR package, so no AUR helper can install it - `pacman -S paru`
-#     does not work either, it is not in the official repos. It has to be built
-#     directly with makepkg once, after which it manages everything else.
-#
-#     paru-bin, not paru: paru-bin ships a prebuilt binary, whereas paru builds
-#     from source and would pull a full Rust toolchain onto every new machine.
-# ---------------------------------------------------------------------------
+# Bootstrap paru-bin (prebuilt, avoids a Rust toolchain) with plain makepkg.
 step "AUR helper"
 
 AUR_HELPER_PKG=paru-bin
 
-if ((!DO_PACMAN)); then
+if ((! DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found"
@@ -501,30 +422,14 @@ elif command -v paru >/dev/null; then
 elif ((DRY)); then
   warn "would build and install $AUR_HELPER_PKG from the AUR with makepkg"
 else
-  # makepkg refuses to run as root, which is one reason this script does too.
-  # base-devel and git come from packages/common.txt, installed above.
   if ! command -v makepkg >/dev/null; then
     warn "makepkg missing - install base-devel first, then re-run"
   else
     ok "building $AUR_HELPER_PKG from the AUR"
     aur_tmp="$(mktemp -d)"
 
-    # makepkg must run with the system bash first on PATH.
-    #
-    # nixpkgs' non-interactive bash is built with --disable-readline, which also
-    # disables bash's programmable completion, so it has no `compgen`. makepkg's
-    # /usr/share/makepkg/util/config.sh calls compgen and dies with
-    # "compgen: command not found" inside the fakeroot environment if a nix bash
-    # shadows /usr/bin/bash.
-    #
-    # Prepending rather than replacing keeps other tools reachable. Go-specific
-    # variables are cleared so makepkg uses /usr/bin/go and its matching stdlib.
-    #
-    # Build and install are separate steps on purpose. `makepkg -si` installs
-    # every artifact it produced, and Arch's default OPTIONS=(debug) also emits a
-    # <pkg>-debug package - which then shows up as undeclared drift forever.
-    # Installing only the non-debug artifacts avoids that without having to
-    # rewrite makepkg.conf.
+    # System bash first (compgen) and no mise Go env. Build and install separately
+    # so the -debug package that makepkg also emits is not installed.
     if git clone --depth 1 "https://aur.archlinux.org/${AUR_HELPER_PKG}.git" "$aur_tmp/$AUR_HELPER_PKG" \
       && (
         cd "$aur_tmp/$AUR_HELPER_PKG" || exit 1
@@ -548,12 +453,9 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 4c. AUR packages
-# ---------------------------------------------------------------------------
 step "AUR packages"
 
-if ((!DO_PACMAN)); then
+if ((! DO_PACMAN)); then
   skip "--no-pacman given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found"
@@ -582,9 +484,7 @@ else
     warn "paru unavailable, skipping: ${aur_missing[*]}"
   else
     ok "installing ${#aur_missing[@]} from the AUR: ${aur_missing[*]}"
-    # paru shells out to makepkg, so use system bash/toolchains and remove Go
-    # environment inherited from mise. Arch's Go stdlib has a distro build suffix
-    # and cannot be mixed with the upstream compiler mise installs.
+    # Same as above: system bash for makepkg, no mise Go env.
     run env -u GOROOT -u GOPATH -u GOENV \
       PATH="/usr/bin:/usr/local/bin:$PATH" \
       paru -S --needed --noconfirm -- "${aur_missing[@]}" \
@@ -592,9 +492,6 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 6. git identity (untracked, because this repo is public)
-# ---------------------------------------------------------------------------
 step "Git identity"
 
 if [[ -f "$HOME/.gitconfig.local" ]] \
@@ -618,11 +515,6 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 7. activate home-manager
-#    This also installs the language toolchains, because home/mise.nix runs
-#    `mise install` as an activation hook.
-# ---------------------------------------------------------------------------
 step "home-manager"
 
 if command -v home-manager >/dev/null; then
@@ -634,13 +526,10 @@ else
     switch --flake "$REPO#$HOST" -b backup
 fi
 
-# ---------------------------------------------------------------------------
-# 8. remove pacman packages that nix now provides
-#    Deliberately AFTER activation, so the nix replacements already exist.
-# ---------------------------------------------------------------------------
+# After activation, so the nix replacements already exist.
 step "Reconciling pacman against nix"
 
-if ((!DO_REMOVE)); then
+if ((! DO_REMOVE)); then
   skip "--no-remove given"
 elif ! command -v pacman >/dev/null; then
   skip "pacman not found"
@@ -649,12 +538,6 @@ else
 
   present=()
   for p in "${candidates[@]}"; do
-    # -Qqe not -Qq: only offer to remove packages that were explicitly wanted.
-    # A migrated package present as somebody else's dependency is not something
-    # you chose, and pacman would refuse to remove it anyway.
-    #
-    # Note `cmd && arr+=(x)` as a bare statement returns 1 when cmd fails, which
-    # `set -e` treats as fatal, hence if/then.
     if pacman -Qqe -- "$p" &>/dev/null; then
       present+=("$p")
     fi
@@ -686,22 +569,11 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 9. podman
-#
-# Deliberately outside the systemd gate below: both of these matter even where
-# the rootless socket cannot run, and `podman compose` fails without them.
-# home-manager re-runs the storage script on every activation.
-# ---------------------------------------------------------------------------
+# Outside the systemd gate: `podman compose` needs these even without the socket.
 step "Podman"
 
-# Rootless networking (pasta, and slirp4netns) needs a tap device. Without a
-# working tun driver every container build dies at:
-#   pasta failed ... Failed to open() /dev/net/tun: No such device
-#
-# Note that is ENODEV, not ENOENT: the node under /dev can exist while no driver
-# sits behind it, so testing for the file is not enough. Open it the way pasta
-# does instead - that is the only check that matches what actually fails.
+# Rootless networking needs tun. The node can exist without a driver behind it,
+# so actually open it.
 kernel_release="$(uname -r)"
 
 tun_usable() {
@@ -714,10 +586,6 @@ if tun_usable; then
 elif [[ $HOST == wsl ]]; then
   warn "/dev/net/tun does not open; enable WSL's tun support on the Windows side"
 elif [[ ! -d /lib/modules/$kernel_release ]]; then
-  # `linux` is declared in packages/arch.txt, so the pacman step above can
-  # upgrade the kernel out from under the running one. pacman removes the old
-  # module tree, and modprobe then fails for every module until a reboot:
-  #   modprobe: FATAL: Module tun not found in directory /lib/modules/<old>
   warn "no module tree at /lib/modules/$kernel_release"
   warn "the running kernel was replaced by an upgrade - REBOOT, then rerun this"
   warn "until then no kernel module can load, so rootless podman has no network"
@@ -758,11 +626,7 @@ else
   rm -f "$tun_tmp"
 fi
 
-# Netavark firewall driver: in WSL2 kernels (and minimal kernels without full
-# nftables NAT modules), netavark fails with:
-#   netavark: nftables error: "nft" did not return successfully while applying ruleset
-# Writing firewall_driver = "none" at system level ensures all rootless/daemon
-# invocations bypass nftables.
+# netavark's nftables backend fails on WSL2 and minimal kernels.
 containers_conf_src="$REPO/config/containers/containers.conf"
 containers_conf_dst=/etc/containers/containers.conf.d/01-firewall.conf
 if ! command -v podman >/dev/null; then
@@ -782,16 +646,9 @@ if ! command -v podman >/dev/null; then
 elif [[ ! -x $podman_storage_script ]]; then
   warn "missing $podman_storage_script - skipping storage setup"
 else
-  # The script is idempotent and prints only when it changes something.
   run "$podman_storage_script"
 fi
 
-# ---------------------------------------------------------------------------
-# 10. login manager
-#
-# sddm is pacman's, but the nix daemon's build users are ours, and they are the
-# reason the greeter needs configuring at all.
-# ---------------------------------------------------------------------------
 step "Login manager"
 
 sddm_conf_src="$REPO/config/sddm/10-hide-system-users.conf"
@@ -803,14 +660,10 @@ elif [[ ! -f $sddm_conf_src ]]; then
 elif [[ -f $sddm_conf_dst ]] && cmp -s "$sddm_conf_src" "$sddm_conf_dst"; then
   skip "sddm already hides nologin accounts"
 else
-  # nix creates nixbld1..nixbld32; every one of them showed up on the greeter.
   ok "hiding nologin accounts (nix build users) from the sddm greeter"
   run sudo install -Dm644 "$sddm_conf_src" "$sddm_conf_dst"
 fi
 
-# ---------------------------------------------------------------------------
-# 11. user services
-# ---------------------------------------------------------------------------
 step "User services"
 
 if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
@@ -832,10 +685,7 @@ else
     warn "run 'systemctl --user daemon-reload' and re-check"
   fi
 
-  # Syncthing is declared in hosts/arch.nix, so home-manager creates AND starts
-  # the unit during activation - this deliberately does not `systemctl enable` it,
-  # which would fight home-manager for ownership. It only reports, and only on
-  # hosts where the unit is supposed to exist.
+  # home-manager owns the syncthing unit, so never `systemctl enable` it here.
   if [[ $HOST == "wsl" ]]; then
     skip "syncthing is not configured on WSL by design"
   elif ! systemctl --user list-unit-files syncthing.service &>/dev/null \
@@ -849,14 +699,8 @@ else
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# 9b. system maintenance timers
-#     All root-level, all shipped by packages we already declare, all off by
-#     default on Arch. Each was verified disabled on the laptop.
-# ---------------------------------------------------------------------------
 step "System maintenance timers"
 
-# unit -> what it does, and why it is not optional
 enable_system_unit() {
   local unit="$1" why="$2"
 
@@ -884,43 +728,23 @@ enable_system_unit() {
 if ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
   skip "systemd not running"
 elif [[ $HOST == "wsl" ]]; then
-  # No physical disk to trim or scrub, and WSL manages its own storage.
   skip "disk maintenance timers not applicable inside WSL"
 
   enable_system_unit ollama.service "local LLM server on 127.0.0.1:11434"
 else
-  # Discard unused SSD blocks. Without this, sustained write performance on NVMe
-  # degrades over time.
   enable_system_unit fstrim.timer "weekly SSD TRIM"
 
-  # Monthly checksum verification of /. btrfs stores checksums but never checks
-  # them unless scrubbed, so silent corruption otherwise goes unnoticed until a
-  # read fails. The unit name escapes the mountpoint: "-" means "/".
+  # "-" is the escaped mountpoint "/".
   enable_system_unit "btrfs-scrub@-.timer" "monthly btrfs scrub of /"
 
-  # SMART monitoring. smartmontools was installed but the daemon was off, so it
-  # was collecting nothing.
   enable_system_unit smartd.service "SMART disk health monitoring"
 
-  # Prune /var/cache/pacman, which otherwise grows without limit. Complements the
-  # nix GC timers rather than duplicating them - different store entirely.
   enable_system_unit paccache.timer "weekly pacman cache pruning"
 
-  # Rank mirrors by speed. Optional in the sense that a slow mirror only costs
-  # time, but it costs it on every single install.
   enable_system_unit reflector.timer "mirror ranking"
 fi
 
-# ---------------------------------------------------------------------------
-# 12. root/system profile garbage collection
-#     home/nix-gc.nix only collects THIS user's profile. Root-owned system
-#     profile generations - created by nix upgrades and any root-level installs
-#     - accumulate unbounded and no user-level flake can reach them.
-#
-#     This unit lives in /etc/systemd/system, so unlike everything else here it
-#     does NOT roll back with a home-manager generation. Unavoidable for
-#     root-owned state.
-# ---------------------------------------------------------------------------
+# nix.gc only collects the user profile; root profile generations need this.
 step "System profile GC"
 
 GC_UNIT=/etc/systemd/system/nix-gc-system.service
@@ -963,9 +787,6 @@ UNIT
     || warn "could not enable nix-gc-system.timer"
 fi
 
-# ---------------------------------------------------------------------------
-# done
-# ---------------------------------------------------------------------------
 step "Done"
 
 cat <<EOF

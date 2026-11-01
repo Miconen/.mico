@@ -1,45 +1,28 @@
-# Packages pacman owns on every host.
-#
-# This is a declarative INPUT, not a dump of what happens to be installed.
-# bootstrap.sh installs these with `pacman -S --needed`, so adding a line here
-# and re-running is safe and idempotent.
-#
-# Anything that is a CLI tool belongs in home/common.nix instead. See the split
-# rule in README.md.
+# pacman packages for every host. CLI tools belong in home/common.nix instead.
 
-# Base system. Kernel/firmware/initramfs live in arch.txt: WSL boots the
-# Windows-provided kernel and has no Arch-managed /boot.
+# Base system
 base
 base-devel
 sudo
 
-# Build toolchain. gcc comes in via base-devel anyway, but it is declared
-# explicitly because the split rule names it: nix must never provide the
-# compiler, since a /nix/store gcc shadows the system one and breaks makepkg.
+# Explicit: a /nix/store gcc would shadow this one and break makepkg.
 gcc
 
-# The login shell binary. Its CONFIG is managed by nix, but the binary must be
-# a stable system path - a /nix/store login shell can lock you out after a GC.
+# Login shell must be a stable system path; a /nix/store one can lock you out after GC.
 zsh
 
-# Recovery editors. These must keep working even if the nix profile is broken,
-# which is exactly why neovim (from nix) is not enough.
+# Recovery editors that work even with a broken nix profile.
 vim
 nano
 
-# SSH client and daemon. System integration, and keychain depends on it.
 openssh
 
-# paccache.timer, enabled by bootstrap.sh, prunes /var/cache/pacman. Without it
-# the package cache grows without limit.
+# paccache.timer
 pacman-contrib
 
-# Container runtime. A system service, which nix is poor at outside NixOS.
-# DOCKER_HOST and the docker->podman alias are set in home/common.nix.
+# Container runtime (system service).
 podman
 podman-compose
 
-# Rootless overlay on any filesystem. On btrfs the kernel refuses the native
-# overlay driver, and podman's btrfs driver is only an optdepend, so this is the
-# fallback scripts/podman-storage.sh reaches for. btrfs-progs is declared above.
+# Rootless overlay fallback on btrfs, used by scripts/podman-storage.sh.
 fuse-overlayfs

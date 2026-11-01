@@ -1,4 +1,3 @@
--- statusline.lua
 local M = {}
 local icons = require("keymaps.icons")
 

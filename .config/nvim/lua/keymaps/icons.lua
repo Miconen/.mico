@@ -1,4 +1,3 @@
--- Shared nerd-font glyphs. Pure data — safe to require from plugins and keymaps.
 return {
 	ActiveLSP = "",
 	DapBreakpoint = "",

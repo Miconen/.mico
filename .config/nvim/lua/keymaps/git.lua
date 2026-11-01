@@ -1,4 +1,3 @@
--- keymaps/git.lua
 local wk = require("which-key")
 local map = vim.keymap.set
 local icons = require("keymaps.icons")
@@ -58,7 +57,8 @@ Snacks.toggle
 	.new({
 		name = "Diff overlay",
 		get = function()
-			return vim.b.minidiff_overlay ~= nil and vim.b.minidiff_overlay
+			local data = require("mini.diff").get_buf_data(0)
+			return data ~= nil and data.overlay == true
 		end,
 		set = function()
 			require("mini.diff").toggle_overlay(0)

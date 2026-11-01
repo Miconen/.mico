@@ -1,8 +1,5 @@
--- plugins/lsp.lua
-
 -- selene: allow(unused_variable, shadowing)
--- Outer `map` is closed over by the inner LspAttach wrapper (Lua locals are not
--- in scope until after their own statement — the inner call hits this binding).
+-- The inner LspAttach `map` wrapper calls this outer one.
 local map = vim.keymap.set
 local icons = require("keymaps.icons")
 
@@ -70,7 +67,6 @@ return {
 					virtual_text = true,
 					underline = true,
 					severity_sort = true,
-					-- false: avoid redrawing diagnostics on every keystroke (costly on modest CPUs).
 					update_in_insert = false,
 					float = {
 						focused = false,
@@ -88,7 +84,6 @@ return {
 				callback = function(event)
 					local buf = event.buf
 					-- selene: allow(shadowing)
-					-- Wraps outer map with buffer + "LSP: " desc prefix.
 					local map = function(keys, func, desc, mode)
 						map(mode or "n", keys, func, { buffer = buf, desc = "LSP: " .. desc })
 					end
@@ -103,7 +98,6 @@ return {
 						Snacks.picker.lsp_implementations()
 					end, "Goto implementation")
 					map("gD", vim.lsp.buf.declaration, "Goto declaration")
-					-- vim.diagnostic.jump replaces deprecated goto_next/goto_prev (removed in 0.13).
 					map("ge", function()
 						vim.diagnostic.jump({ count = 1, float = true })
 					end, "Next diagnostic")
@@ -114,7 +108,6 @@ return {
 					map("<leader>lD", function()
 						Snacks.picker.lsp_type_definitions()
 					end, "Type definition")
-					-- Snacks source is lsp_symbols (not lsp_document_symbols).
 					map("<leader>ls", function()
 						Snacks.picker.lsp_symbols()
 					end, "Document symbols")
@@ -127,7 +120,6 @@ return {
 					map("K", vim.lsp.buf.hover, "Hover docs")
 
 					local client = vim.lsp.get_client_by_id(event.data.client_id)
-					-- Method form client:supports_method; dot form is deprecated for 0.13.
 					if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
 						local hl_group = vim.api.nvim_create_augroup("lsp_highlight_" .. buf, { clear = true })
 						vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
@@ -171,8 +163,7 @@ return {
 				ts_ls = {
 					init_options = {
 						preferences = {
-							-- Imports types using `import type { Foo }` or `import { type Foo }`
-							-- so Biome doesn't complain about type-only imports being imported as values.
+							-- Biome rejects type-only imports imported as values.
 							preferTypeOnlyAutoImports = true,
 						},
 					},
@@ -196,13 +187,11 @@ return {
 				nil_ls = {},
 			}
 
-			-- Do not call mason.setup() here — lazy already did via opts (double setup duplicates registries).
 			local ensure_installed = vim.tbl_keys(servers)
 			vim.list_extend(ensure_installed, {
 				"stylua",
 				"prettierd",
-				"black",
-				"isort",
+				"ruff",
 				"gofumpt",
 				"goimports",
 				"nixfmt",
@@ -214,8 +203,7 @@ return {
 			})
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
-			-- automatic_enable off: servers table is the single source of truth.
-			-- mason-lspconfig still needed so mason-tool-installer can map lspconfig ↔ package names.
+			-- Only loaded so mason-tool-installer can map lspconfig names to packages.
 			require("mason-lspconfig").setup({ automatic_enable = false })
 
 			vim.lsp.config("*", { capabilities = capabilities })
@@ -255,7 +243,7 @@ return {
 			end,
 			formatters_by_ft = {
 				lua = { "stylua" },
-				python = { "isort", "black" },
+				python = { "ruff_organize_imports", "ruff_format" },
 				javascript = { "biome" },
 				typescript = { "biome" },
 				typescriptreact = { "biome" },
@@ -316,7 +304,6 @@ return {
 				["<C-f>"] = { "scroll_documentation_down", "fallback" },
 				["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
 				["<C-e>"] = { "hide" },
-				-- Manually trigger snippet completion on demand with <C-s> in insert mode
 				["<C-s>"] = {
 					function(cmp)
 						cmp.show({ providers = { "snippets" } })
@@ -328,8 +315,7 @@ return {
 				nerd_font_variant = "mono",
 			},
 			sources = {
-				-- 'snippets' is removed from default auto-completion so snippets don't clutter normal completions.
-				-- Trigger them on-demand with <C-s> in insert mode or manage them with nvim-scissors.
+				-- No "snippets": they're shown on demand with <C-s>.
 				default = { "lazydev", "lsp", "path", "buffer", "dadbod" },
 				providers = {
 					lazydev = {

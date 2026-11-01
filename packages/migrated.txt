@@ -1,18 +1,10 @@
-# Packages that MOVED to nix and should no longer be installed by pacman.
-#
-# bootstrap.sh removes any of these that are still present, but only after
-# confirming, and only after home-manager has successfully activated - so the
-# nix replacement is guaranteed to already be on PATH.
-#
-# Some entries (notably git/ripgrep) may be required by other pacman packages.
-# bootstrap tries each removal independently and leaves dependency-blocked ones
-# installed and explicit.
+# Moved to nix. bootstrap.sh offers to remove these from pacman after home-manager activates;
+# removals blocked by dependencies are left installed.
 
 eza
 fastfetch
 git
-# Not migrated so much as replaced: nix provides btop instead. Kept here so
-# bootstrap still offers to remove a pacman-installed htop.
+# Replaced by btop.
 htop
 keychain
 opencode
@@ -22,7 +14,7 @@ neovim
 wget
 zoxide
 
-# Never installed on the laptop, but present in the old WSL manifest
+# From the old WSL manifest
 github-cli
 hub
 lazydocker

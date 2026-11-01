@@ -1,17 +1,10 @@
 #!/usr/bin/env bash
-#
-# Lint everything in this repo. Run locally with ./ci/lint.sh, or via CI.
-#
-# Every check runs even if an earlier one fails, then the script exits non-zero
-# if any of them did. A plain sequence of CI steps stops at the first failure and
-# hides the rest, which is how the original workflow managed to skip deadnix.
-#
+# Lint everything. Every check runs even if an earlier one fails.
 set -uo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 
-# Use the devShell's tools if they are already on PATH (inside `nix develop`, or
-# with direnv active in this repo), otherwise enter the shell per invocation.
+# Use tools already on PATH, otherwise run them via the devShell.
 wrap() {
   if command -v "$1" >/dev/null; then
     "$@"
@@ -33,8 +26,7 @@ run_check() {
   fi
 }
 
-# selene exits 0 even when it reports warnings, so its exit status alone is not a
-# usable signal - assert on the summary lines instead.
+# selene exits 0 even with warnings, so check its summary lines.
 selene_clean() {
   local out
   out="$(wrap selene .config/nvim 2>&1)" || true
@@ -42,8 +34,6 @@ selene_clean() {
   printf '%s\n' "$out" | grep -qx '0 errors' && printf '%s\n' "$out" | grep -qx '0 warnings'
 }
 
-# `*.sh` already matches bootstrap.sh at the root - git pathspecs are not
-# anchored - so listing it separately would lint it twice.
 mapfile -t nix_files < <(git ls-files '*.nix')
 mapfile -t sh_files < <(git ls-files '*.sh')
 mapfile -t workflow_files < <(git ls-files '.github/workflows/*.yml' '.github/workflows/*.yaml')
@@ -55,9 +45,6 @@ run_check deadnix wrap deadnix --fail
 
 run_check shellcheck wrap shellcheck --external-sources "${sh_files[@]}"
 
-# -i 2 because these scripts are 2-space indented; shfmt defaults to tabs and
-# would otherwise want to reformat every line. --binary-next-line matches the
-# existing style of putting `||` on the continuation line.
 run_check shfmt wrap shfmt --diff --simplify --indent 2 --binary-next-line "${sh_files[@]}"
 
 if ((${#lua_files[@]})); then
@@ -65,9 +52,7 @@ if ((${#lua_files[@]})); then
   run_check selene selene_clean
 fi
 
-# Cannot go through wrap(): that inspects its first argument with `command -v`,
-# which succeeds for an executable path and would run the script outside the
-# devShell - exactly how CI failed, with zellij missing from PATH.
+# Not via wrap(): `command -v` succeeds for a script path, skipping the devShell.
 if command -v zellij >/dev/null; then
   run_check zellij ./ci/zellij-check.sh
 else

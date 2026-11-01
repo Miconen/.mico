@@ -1,15 +1,11 @@
--- plugins/statusline.lua
--- nvim-navic: provides LSP symbol context to the winbar
-
 return {
 	{
 		"SmiteshP/nvim-navic",
 		lazy = true,
 		opts = {
-			-- auto_attach: no changes to lsp.lua needed
 			lsp = { auto_attach = true },
-			highlight = true, -- per-kind colors (NavicIconsFunction, NavicIconsClass, etc.)
-			separator = " › ", -- matches WinBarSep style
+			highlight = true,
+			separator = " › ",
 			depth_limit = 5,
 			icons = {
 				File = "󰈙 ",

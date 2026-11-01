@@ -7,8 +7,6 @@
     enable = true;
     enableZshIntegration = true;
 
-    # Use fd rather than find. Note the old config also aliased `fd=fdfind`,
-    # a Debian-only binary name that broke fd entirely on Arch. Removed.
     defaultCommand = "fd --hidden --strip-cwd-prefix --exclude .git";
 
     fileWidget = {
@@ -21,13 +19,10 @@
       options = [ "--preview 'eza --tree --color=always {} | head -200'" ];
     };
 
-    # Hand Ctrl-R to atuin. An empty command is the documented, supported way to
-    # release the binding to a history manager - upstream names Atuin explicitly.
-    # Setting a non-empty custom command instead would print a startup warning.
+    # Empty releases Ctrl-R to atuin (the supported way; non-empty would warn).
     historyWidget.command = "";
 
-    # Catppuccin Mocha, replacing the hand-rolled blue palette in the old
-    # .config/zsh/fzf.sh.
+    # Catppuccin Mocha
     colors = {
       "bg+" = "#313244";
       "bg" = "#1e1e2e";
@@ -47,11 +42,7 @@
     };
   };
 
-  # Completion helpers from the old fzf.sh. These are shell functions, so they
-  # have to be injected into zshrc rather than expressed as fzf options.
-  #
-  # Order 1300 on purpose: home-manager already uses 1100 for shellAliases,
-  # 1150 for dirHashes and 1200 for syntax highlighting.
+  # 1300: after home-manager's aliases (1100), dirHashes (1150), highlighting (1200).
   programs.zsh.initContent = lib.mkOrder 1300 ''
     _fzf_compgen_path() {
       fd --hidden --exclude .git . "$1"

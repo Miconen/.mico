@@ -9,9 +9,7 @@
   programs.zsh = {
     enable = true;
 
-    # Keep ~/.zshrc at the conventional location. Left explicit because the
-    # default flips to $XDG_CONFIG_HOME/zsh at stateVersion 26.05, which would
-    # silently relocate the config and require ZDOTDIR indirection.
+    # Explicit: the default moves to $XDG_CONFIG_HOME/zsh at stateVersion 26.05.
     dotDir = config.home.homeDirectory;
 
     enableCompletion = true;
@@ -28,7 +26,6 @@
     };
 
     history = {
-      # Was 1000 in the old config, which is very small.
       size = 50000;
       save = 50000;
       path = "${config.home.homeDirectory}/.zsh_history";
@@ -40,9 +37,6 @@
       share = true;
     };
 
-    # home-manager has no `historySubstringSearch` option, so these two are
-    # explicit plugin entries. `file` is relative to the package root.
-    # Sourced at order 900, before aliases (1100) and highlighting (1200).
     plugins = [
       {
         name = "zsh-history-substring-search";
@@ -58,34 +52,22 @@
 
     shellAliases = {
       # File system
-      # eza documents `--icons=WHEN`, with an equals sign. Space-separated
-      # (`--icons always`) parses `always` as a positional path argument, so
-      # `ls` tries to list a file called "always" instead.
-      #
-      # `always` also emits icons when piped, e.g. `ls | grep foo`. Use
-      # `--icons=auto` if you'd rather they only appear on a real terminal.
+      # `--icons=always` needs the `=`; with a space, `always` is read as a path.
       ls = "eza -lh --group-directories-first --icons=always";
       lsa = "ls -a";
       lt = "eza --tree --level=2 --long --icons=always --git";
       lta = "lt -a";
-      # was: batcat (Debian-only binary name, broken on Arch)
       ff = "fzf --preview 'bat --style=numbers --color=always {}'";
       cd = "z";
 
       # Configs
-      # The old `.zshrc` alias is pointless now: ~/.zshrc is a read-only
-      # symlink into the nix store. Edit the source of truth instead.
       zshconf = "nvim ${repoPath}/home/zsh.nix";
       nixconf = "nvim ${repoPath}/flake.nix";
       pkgconf = "nvim ${repoPath}/home/common.nix";
-      # Find a package by name or description before declaring it.
       nsearch = "nix search nixpkgs";
-      # Which package provides a given binary, e.g. `nwhich bin/ffmpeg`.
       nwhich = "nix-locate";
       ".vimrc" = "nvim ~/.config/nvim";
       nvimdiff = "nvim -d";
-      # Structural diff. delta stays the git pager; this is for "what actually
-      # changed", ignoring reformatting.
       dft = "difft";
       todo = "nvim ~/.todo.md";
 
@@ -106,16 +88,15 @@
       lzg = "lazygit";
       lzd = "lazydocker";
 
-      # Containers (podman on both hosts; see DOCKER_HOST in common.nix)
+      # Containers
       docker = "podman";
       dcb = "docker compose up --build";
       api = "docker compose --profile dev up --build";
-      # Purge dead/stuck containers, networks and restart podman socket
       dpurge = "podman compose down 2>/dev/null || true; podman rm -fa 2>/dev/null || true; podman network prune -f 2>/dev/null || true; systemctl --user restart podman.socket 2>/dev/null || true";
       ppurge = "dpurge";
 
       # Node
-      bot = "npm run start | pino-pretty -c";
+      bot = "set -a; source .env; set +a; go run ./cmd/bot";
       bot-test = "AUTH_KEY=123 LOG_LEVEL=silent npm run test";
 
       # Git
@@ -125,52 +106,29 @@
 
       # Zellij
       zf = "zellij action new-pane -f -- ";
-      # zellij reads config only when the session's server starts, and there is no
-      # reload action - `zellij action --help` offers only start-or-reload-plugin.
-      # session_serialization then makes `attach` resurrect the OLD layout, so
-      # editing config.kdl and running mico switch changes nothing at all. This kills the
-      # session and purges its saved state; open a new terminal for a fresh one.
+      # zellij can't reload config, and session_serialization resurrects the old
+      # layout, so kill the session; open a new terminal afterwards.
       zreload = "zellij delete-session --force main";
     };
 
     initContent = lib.mkMerge [
-      # ---- order 500: earliest ----------------------------------------------
       (lib.mkOrder 500 ''
-        # Auto-start zellij.
-        #
-        # Guards, all of which the previous config lacked:
-        #   -o interactive : never hijack `zsh -i -c '...'`
-        #   -z $ZELLIJ     : don't nest sessions
-        #   -z SSH_CONNECTION : don't hijack remote shells
-        #   TERM != dumb   : don't break editors/tooling that spawn a shell
-        # ZELLIJ_SKIP=1 gives a bare shell, useful when debugging the shell config
-        # itself or running something that dislikes a multiplexer.
+        # Auto-start zellij. ZELLIJ_SKIP=1 gives a bare shell.
         if [[ -o interactive && -z "$ZELLIJ" && -z "$ZELLIJ_SKIP" && -z "$SSH_CONNECTION" && "$TERM" != "dumb" ]]; then
           if command -v zellij >/dev/null; then
-            # attach --create reuses one persistent session instead of starting a
-            # fresh one per terminal, which is what makes session_serialization
-            # in config.kdl actually do anything. The layout comes from
-            # `default_layout "default"` in config.kdl, because attach --create
-            # does not accept --layout. Downside: a wedged session follows you
-            # until `zellij kill-session main`.
+            # One persistent session; layout comes from default_layout in config.kdl.
             exec zellij attach --create main
           fi
         fi
       '')
 
-      # ---- order 600: fzf-tab ------------------------------------------------
-      # Order is load-bearing and narrow. fzf-tab must come after compinit
-      # (home-manager runs that at 570) but BEFORE anything that wraps
-      # completion widgets. home-manager sources zsh-autosuggestions at 700, and
-      # `programs.zsh.plugins` entries at 900 - so declaring fzf-tab as a plugin
-      # would load it too late and it would silently do nothing.
+      # fzf-tab must load after compinit (570) but before autosuggestions (700),
+      # so it can't be a programs.zsh.plugins entry (900).
       (lib.mkOrder 600 ''
         source ${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh
       '')
 
-      # ---- order 1000: general config ---------------------------------------
       (lib.mkOrder 1000 ''
-        # Options not covered by programs.zsh.history above
         unsetopt menu_complete
         unsetopt flowcontrol
         setopt prompt_subst
@@ -179,18 +137,9 @@
         setopt complete_in_word
         setopt hist_verify
         setopt no_list_ambiguous
-
-        # zsh leaves this off by default (unlike bash), which means a pasted
-        # command with a trailing `# comment` fails with "command not found: #"
-        # or a glob error. On for sanity when copy-pasting.
         setopt interactive_comments
 
-        # fzf-tab requires the native menu to be OFF; `menu select` fights it and
-        # the two together break completion entirely.
-        # Name the zellij tab after the current project, automatically.
-        #
-        # Replaces a manual `zt` command: a chpwd hook means tab names just track
-        # wherever you are, with nothing to remember and no keybind.
+        # Name the zellij tab after the current project.
         if [[ -n "$ZELLIJ" ]]; then
           autoload -Uz add-zsh-hook
 
@@ -199,14 +148,8 @@
             root="$(git rev-parse --show-toplevel 2>/dev/null)" || root="$PWD"
             name="''${root:t}"
             [[ "$PWD" == "$HOME" ]] && name="~"
-            # This runs on every cd, so skip the subprocess when nothing changed.
             [[ "$name" == "$_MICO_ZELLIJ_TAB" ]] && return 0
-            # Plain `rename-tab` renames the FOCUSED tab, not this shell's tab, so
-            # a shell starting in the background (session resurrection restores
-            # every pane at once, or a tab opened while focus is elsewhere) would
-            # rename whichever tab you happen to be looking at. Resolve our own
-            # tab from $ZELLIJ_PANE_ID instead. Looked up each time rather than
-            # cached because panes can be moved between tabs.
+            # Plain rename-tab hits the FOCUSED tab; resolve this pane's own tab.
             tab_id="$(zellij action list-panes --json --tab 2>/dev/null \
               | ${pkgs.jq}/bin/jq -r --argjson id "$ZELLIJ_PANE_ID" \
                   '.[] | select(.is_plugin == false and .id == $id) | .tab_id')"
@@ -219,10 +162,10 @@
           _mico_zellij_tab_name
         fi
 
+        # fzf-tab requires the native menu off.
         zstyle ':completion:*' menu no
         zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
-        # fzf-tab previews
         zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
         zstyle ':fzf-tab:complete:z:*' fzf-preview 'eza -1 --color=always $realpath'
         zstyle ':fzf-tab:complete:*:*' fzf-preview \
@@ -231,9 +174,7 @@
         zstyle ':fzf-tab:*' switch-group '<' '>'
       '')
 
-      # ---- last: keybindings ------------------------------------------------
-      # Must run after plugin sourcing, otherwise the history-substring-search
-      # and autosuggest widgets do not exist yet and bindkey silently fails.
+      # Last, so the plugin widgets exist before binding them.
       (lib.mkAfter ''
         bindkey '^[[A' history-substring-search-up
         bindkey '^[[B' history-substring-search-down

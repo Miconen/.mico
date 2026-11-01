@@ -1,4 +1,3 @@
--- keymaps/ui.lua
 local wk = require("which-key")
 local map = vim.keymap.set
 local icons = require("keymaps.icons")
@@ -24,13 +23,8 @@ Snacks.toggle.treesitter():map("<leader>uT")
 Snacks.toggle.inlay_hints():map("<leader>uh")
 Snacks.toggle.dim():map("<leader>uz")
 
--- render-markdown and csvview are both lazy-loaded, so their state getters must
--- not require them. Snacks' which-key integration calls get() when the <leader>u
--- menu is drawn, and a require there would load the plugin just for browsing the
--- menu. package.loaded is the honest answer: not loaded means not rendering.
---
--- set() takes the state Snacks computed rather than calling the plugin's own
--- toggle(), so the two cannot disagree about which way to flip.
+-- get() must not require these lazy plugins: which-key calls it when drawing
+-- the <leader>u menu, which would load them just for browsing.
 Snacks.toggle
 	.new({
 		name = "Markdown render",
@@ -54,7 +48,6 @@ Snacks.toggle
 		name = "CSV view",
 		get = function()
 			local cv = package.loaded["csvview"]
-			-- 0 resolves to the current buffer; the view is per buffer.
 			return cv ~= nil and cv.is_enabled(0)
 		end,
 		set = function(state)

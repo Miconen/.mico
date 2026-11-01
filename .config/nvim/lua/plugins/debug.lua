@@ -1,4 +1,3 @@
--- plugins/debug.lua
 local icons = require("keymaps.icons")
 
 local function ensure_dap_view_compat()
@@ -21,46 +20,15 @@ end
 local DAP_VIEW_SECTIONS = { "scopes", "watches", "threads", "repl", "console", "sessions" }
 
 local function setup_dap_view_section_keys()
-	local dap = require("dap")
-	local mapped = false
-
-	local function enable()
-		if mapped then
-			return
-		end
-		mapped = true
-		for i, section in ipairs(DAP_VIEW_SECTIONS) do
-			vim.keymap.set("n", tostring(i), function()
-				local view = require("dap-view")
-				if not dap_view_is_open() then
-					view.open()
-				end
-				view.show_view(section)
-			end, { desc = "DAP view: " .. section, silent = true })
-		end
+	for i, section in ipairs(DAP_VIEW_SECTIONS) do
+		vim.keymap.set("n", "<leader>d" .. i, function()
+			local view = require("dap-view")
+			if not dap_view_is_open() then
+				view.open()
+			end
+			view.show_view(section)
+		end, { desc = "DAP view: " .. section, silent = true })
 	end
-
-	local function disable()
-		if not mapped then
-			return
-		end
-		mapped = false
-		for i = 1, #DAP_VIEW_SECTIONS do
-			pcall(vim.keymap.del, "n", tostring(i))
-		end
-	end
-
-	local function maybe_disable()
-		if not dap.session() then
-			disable()
-		end
-	end
-
-	dap.listeners.after.event_initialized["mico_dap_view_keys"] = enable
-	dap.listeners.after.event_stopped["mico_dap_view_keys"] = enable
-	dap.listeners.after.event_terminated["mico_dap_view_keys"] = maybe_disable
-	dap.listeners.after.event_exited["mico_dap_view_keys"] = maybe_disable
-	dap.listeners.after.disconnect["mico_dap_view_keys"] = maybe_disable
 end
 
 local function setup_js_ts_dap(dap)
@@ -68,24 +36,10 @@ local function setup_js_ts_dap(dap)
 	local js_debug = data .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
 	local js_debug_bin = data .. "/mason/bin/js-debug-adapter"
 
-	-- Discover the real script path (mason layout varies slightly by version).
 	if vim.fn.filereadable(js_debug) == 0 then
-		local alt = {
-			data .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
-			data .. "/mason/packages/js-debug-adapter/src/dapDebugServer.js",
-		}
-		local ok, registry = pcall(require, "mason-registry")
-		if ok and registry.has_package("js-debug-adapter") then
-			local pkg = registry.get_package("js-debug-adapter")
-			if pkg:is_installed() then
-				table.insert(alt, 1, pkg:get_install_path() .. "/js-debug/src/dapDebugServer.js")
-			end
-		end
-		for _, p in ipairs(alt) do
-			if vim.fn.filereadable(p) == 1 then
-				js_debug = p
-				break
-			end
+		local alt = data .. "/mason/packages/js-debug-adapter/src/dapDebugServer.js"
+		if vim.fn.filereadable(alt) == 1 then
+			js_debug = alt
 		end
 	end
 
@@ -95,8 +49,7 @@ local function setup_js_ts_dap(dap)
 		return
 	end
 
-	-- Prefer node + dapDebugServer.js (wiki). Mason bin wrapper is a fallback.
-	-- Do not pre-bind a port — races with the server and yields connect errors.
+	-- Don't pre-bind a port: it races the server and causes connect errors.
 	local cmd = "node"
 	local args = { js_debug, "${port}" }
 	if vim.fn.filereadable(js_debug) == 0 and vim.fn.executable(js_debug_bin) == 1 then
@@ -120,8 +73,7 @@ local function setup_js_ts_dap(dap)
 	dap.adapters["pwa-node"] = adapter
 	dap.adapters["pwa-chrome"] = vim.deepcopy(adapter)
 
-	-- js-debug is multi-session: parent + child. Scopes/variables live on the
-	-- child that actually stopped. Keep focus on the stopped leaf session.
+	-- js-debug spawns child sessions; scopes live on the child that stopped.
 	local pwa_types = { ["pwa-node"] = true, ["pwa-chrome"] = true, ["node"] = true, ["chrome"] = true }
 	dap.listeners.after.event_stopped["mico_pwa_focus_leaf"] = function(session)
 		if not session or not pwa_types[session.config.type] then
@@ -141,8 +93,7 @@ local function setup_js_ts_dap(dap)
 		"**/node_modules/**",
 	}
 
-	-- Shared source-map settings. Do NOT set outFiles on tsx launches: tsx runs
-	-- .ts in-process; pointing the adapter at emitted .js breaks BP binding.
+	-- No outFiles for tsx: it runs .ts in-process, and emitted .js breaks breakpoints.
 	local ts_maps = {
 		sourceMaps = true,
 		resolveSourceMapLocations = {
@@ -182,8 +133,7 @@ local function setup_js_ts_dap(dap)
 		return config
 	end
 
-	-- Open panel once frames/scopes exist (after.scopes). event_stopped races —
-	-- current_frame is often still nil → empty scopes that stick.
+	-- Open on after.scopes, not event_stopped: the latter races and shows empty scopes.
 	dap.listeners.after.scopes["mico_open_dap_view"] = function(session)
 		if not session or not session.stopped_thread_id or dap.session() ~= session then
 			return
@@ -215,8 +165,6 @@ local function setup_js_ts_dap(dap)
 		}, node_maps, cfg)
 	end
 
-	-- node --import tsx <program>: one process; js-debug injects inspect-brk.
-	-- node resolves the `tsx` package from cwd/node_modules.
 	local function launch_tsx(cfg)
 		return launch(
 			vim.tbl_deep_extend("force", {
@@ -224,7 +172,6 @@ local function setup_js_ts_dap(dap)
 				runtimeExecutable = "node",
 				runtimeArgs = { "--import", "tsx" },
 				autoAttachChildProcesses = false,
-				-- Wait for tsx/esbuild inline maps so Locals bind to .ts frames.
 				pauseForSourceMap = true,
 			}, cfg),
 			ts_maps
@@ -291,7 +238,6 @@ local function dap_view_toggle_or_start()
 	local dap = require("dap")
 	local view = require("dap-view")
 	if not dap.session() then
-		-- Same entry as <leader>dc: prompt for a config, then show the panel.
 		dap.continue()
 		view.open()
 		view.show_view("scopes")

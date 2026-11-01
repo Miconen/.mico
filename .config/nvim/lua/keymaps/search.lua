@@ -1,4 +1,3 @@
--- keymaps/search.lua
 local wk = require("which-key")
 local map = vim.keymap.set
 local icons = require("keymaps.icons")

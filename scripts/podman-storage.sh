@@ -1,32 +1,9 @@
 #!/usr/bin/env bash
 #
-# Configure rootless podman storage for the filesystem it actually sits on.
-#
-# Why this is a script and not a static config file: the correct graph driver
-# depends on the filesystem backing the containers dir, which nix cannot know at
-# build time. The laptop is btrfs, where podman's default overlay driver refuses
-# to run:
-#
-#   'overlay' is not supported over btrfs ... backing file system is unsupported
-#
-# WSL is usually ext4, where overlay is correct and forcing btrfs would break it
-# the same way. So detect, then write only what is needed.
-#
-# Two further things a config file cannot do, both of which caused real failures
-# here:
-#
-#   * containers/storage prefers whichever driver already has a directory in the
-#     graphroot over the one in storage.conf - it will not orphan a store. A
-#     leftover overlay/ dir therefore silently defeats driver = "btrfs".
-#   * whether a driver actually works is only knowable by running podman. On
-#     btrfs there are two viable options (the native btrfs driver, or overlay
-#     via fuse-overlayfs) and which one is available depends on how podman was
-#     built and what is installed.
-#
-# So: pick candidates from the filesystem, try them in order, verify each with
-# podman itself, and keep the first that works.
-#
-# Idempotent. Safe to run from bootstrap.sh and from home-manager activation.
+# Configure rootless podman storage for the filesystem it sits on. overlay is
+# refused on btrfs, and a leftover store dir for another driver overrides
+# storage.conf, so: pick candidates, clear stale stores, verify with podman.
+# Idempotent.
 #
 #   --dry-run    print what would change, touch nothing
 #   --quiet      only print on change or error
@@ -42,8 +19,7 @@ diagnose=0
 conf_changed=0
 verify_output=""
 
-# $USER is not guaranteed to be set - home-manager activation and systemd units
-# both run without it, and `set -u` would abort on the bare variable.
+# $USER is unset under home-manager activation and systemd units.
 user_name="${USER:-$(id -un)}"
 
 for arg in "$@"; do
@@ -58,8 +34,6 @@ for arg in "$@"; do
   esac
 done
 
-# Overridable for testing. Podman resolves these through XDG, so honour it here
-# too - hardcoding ~/.config would write a file podman never reads.
 storage_root="${PODMAN_STORAGE_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/containers/storage}"
 storage_conf="${PODMAN_STORAGE_CONF:-${XDG_CONFIG_HOME:-$HOME/.config}/containers/storage.conf}"
 
@@ -103,8 +77,7 @@ if ! command -v podman >/dev/null && ((diagnose == 0)); then
   exit 0
 fi
 
-# Filesystem of the deepest existing ancestor - the storage dir itself may not
-# exist yet on a fresh machine.
+# Filesystem of the deepest existing ancestor; the store may not exist yet.
 fs_type() {
   local path="$1"
   while [[ ! -e $path && $path != / ]]; do
@@ -113,13 +86,9 @@ fs_type() {
   if command -v findmnt >/dev/null; then
     findmnt --noheadings --output FSTYPE --target "$path" 2>/dev/null && return 0
   fi
-  # Busybox-free fallback; prints e.g. "btrfs" or "ext2/ext3".
   stat -f -c %T "$path" 2>/dev/null || true
 }
 
-# ---------------------------------------------------------------------------
-# --diagnose: print what podman actually sees and stop.
-# ---------------------------------------------------------------------------
 if ((diagnose)); then
   dump_file() {
     local path="$1"
@@ -193,18 +162,11 @@ if [[ -z $fs ]]; then
   exit 0
 fi
 
-# ---------------------------------------------------------------------------
-# Candidate strategies, best first.
-#
-# Only btrfs needs anything special. Everywhere else podman's own default is
-# right, so we deliberately write no config at all.
-# ---------------------------------------------------------------------------
+# Candidate strategies, best first. Only btrfs needs a config at all.
 strategies=()
 case "$fs" in
 btrfs)
   strategies+=(btrfs)
-  # Rootless overlay works on any filesystem through fuse-overlayfs, so it is a
-  # sound fallback when the native btrfs driver is unavailable.
   [[ -x $FUSE_OVERLAYFS ]] && strategies+=(fuse-overlayfs)
   ;;
 *)
@@ -214,7 +176,6 @@ esac
 
 say "$storage_root is on $fs, trying: ${strategies[*]}"
 
-# Driver each strategy makes podman report, and therefore the graph dir it uses.
 strategy_driver() {
   case "$1" in
   btrfs) printf 'btrfs\n' ;;
@@ -222,18 +183,11 @@ strategy_driver() {
   esac
 }
 
-# ---------------------------------------------------------------------------
-# storage.conf
-# ---------------------------------------------------------------------------
 conf_is_ours() {
   [[ -f $storage_conf ]] && grep -qF "$MARKER" "$storage_conf"
 }
 
-# A symlink at this path is never hand-written - home-manager put it there.
-# Earlier versions of this repo managed storage.conf as an xdg.configFile, which
-# points into /nix/store; once that generation is garbage collected the link
-# dangles, podman silently falls back to /etc (overlay), and writing through the
-# link would try to create a file inside the read-only store. Clear it first.
+# A symlink here is a stale home-manager link into the read-only nix store.
 if [[ -L $storage_conf ]]; then
   link_target="$(readlink "$storage_conf" 2>/dev/null || true)"
   if [[ -e $storage_conf ]]; then
@@ -246,7 +200,6 @@ if [[ -L $storage_conf ]]; then
 fi
 
 if [[ -e $storage_conf ]] && ! conf_is_ours; then
-  # A hand-written or distro-provided config outranks us.
   warn "$storage_conf exists and is not managed here, not touching it"
   warn "it must select a driver that works on $fs, or podman will fail"
   exit 0
@@ -294,12 +247,7 @@ mount_program = "'"$FUSE_OVERLAYFS"'"'
   conf_changed=1
 }
 
-# ---------------------------------------------------------------------------
-# Existing store
-#
-# The layout is version dependent: podman <= 5 created <driver>-layers and
-# <driver>-images alongside <driver>/, podman 6 keeps one db.sql plus <driver>/.
-# ---------------------------------------------------------------------------
+# podman <= 5 also creates <driver>-layers and <driver>-images dirs.
 KNOWN_DRIVERS=(overlay overlay2 btrfs vfs zfs aufs devicemapper)
 
 existing_drivers() {
@@ -311,14 +259,7 @@ existing_drivers() {
   done
 }
 
-# Delete the whole store.
-#
-# A plain `rm -rf` fails on every file inside a layer's diff/:
-#   rm: cannot remove '.../overlay/<layer>/diff/usr': Permission denied
-# Rootless podman maps container root and friends to subuids from /etc/subuid,
-# so those files are not owned by the invoking user and cannot be unlinked by
-# it. `podman unshare` enters that same user namespace, where they are owned by
-# root, which is the documented way to clean a rootless store.
+# Layer files are owned by subuids, so plain rm fails; use podman's namespace.
 remove_store() {
   if ((dry_run)); then
     printf 'podman-storage: would run: podman unshare rm -rf %s\n' "$storage_root"
@@ -329,13 +270,11 @@ remove_store() {
     return 0
   fi
 
-  # No usable user namespace (no /etc/subuid range, missing newuidmap): the
-  # store may still be plain user-owned, so a direct removal can work.
+  # No usable user namespace; the store may still be plain user-owned.
   rm -rf "$storage_root" 2>/dev/null || true
   [[ ! -e $storage_root ]]
 }
 
-# Remove the store when it holds state for a driver we are not about to use.
 clear_stale_store() {
   local expected="$1" found stale=()
 
@@ -346,7 +285,6 @@ clear_stale_store() {
 
   ((${#stale[@]})) || return 0
 
-  # Guard the rm: only ever inside the containers storage dir.
   case "$storage_root" in
   */containers/storage) ;;
   *)
@@ -376,9 +314,6 @@ clear_stale_store() {
   exit 1
 }
 
-# ---------------------------------------------------------------------------
-# Try each strategy, and let podman itself say whether it worked.
-# ---------------------------------------------------------------------------
 verify() {
   verify_output="$(podman info --format '{{.Store.GraphDriverName}}' 2>&1)" && return 0
   return 1

@@ -9,9 +9,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Prebuilt nix-index database, so `comma` and `nix-locate` work immediately
-    # instead of after a long local index build. Costs a few hundred MB, refreshed
-    # upstream weekly.
+    # Prebuilt index for `comma` / `nix-locate`, avoiding a long local build.
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -29,28 +27,20 @@
       system = "x86_64-linux";
       username = "miso";
 
-      # Single source of truth for where this repo is checked out. Consumed by
-      # the nvim out-of-store symlink, the mico wrapper, and the editing aliases,
-      # so relocating the repo is a one-line change here.
       repoPath = "/home/${username}/.mico";
 
-      # allowUnfree is set here rather than via `nixpkgs.config` in a module,
-      # because home-manager refuses `nixpkgs.*` options when `pkgs` is passed
-      # explicitly to homeManagerConfiguration.
+      # Set here, not via `nixpkgs.config`: home-manager rejects `nixpkgs.*`
+      # options when `pkgs` is passed explicitly.
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
       };
 
-      # hostName is passed through so common.nix can pin the mico wrapper
-      # to this host, instead of each host file repeating it.
       mkHome =
         hostName: hostModule:
         home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           modules = [
-            # `homeModules`, not `hmModules` - the latter is deprecated upstream
-            # and emits a rename warning.
             nix-index-database.homeModules.nix-index
             ./home/common.nix
             hostModule
@@ -66,8 +56,8 @@
     {
       homeConfigurations = configs;
 
-      # Makes `nix flake check` build both hosts. Without this it checks almost
-      # nothing, because homeConfigurations is not a standard flake output.
+      # homeConfigurations isn't a standard output, so `nix flake check` would
+      # otherwise build nothing.
       checks.${system} = builtins.mapAttrs (_name: cfg: cfg.activationPackage) configs;
 
       devShells.${system}.default = pkgs.mkShell {
@@ -77,21 +67,16 @@
           statix
           deadnix
 
-          # shell - bootstrap.sh and ci/lint.sh are non-trivial now.
-          # shellcheck-minimal rather than shellcheck: same binary, much smaller
-          # closure, since the full attribute pulls in the wrapper and docs.
+          # shell
           shellcheck-minimal
           shfmt
 
-          # CI workflow YAML
+          # CI
           actionlint
-
-          # ci/zellij-check.sh starts a real session to validate the config and
-          # layout, because `zellij setup --check` is too permissive to catch
-          # an empty new_tab_template.
+          # ci/zellij-check.sh starts a real session; `zellij setup --check` is too lax.
           zellij
 
-          # neovim config lives in .config/nvim now
+          # lua
           stylua
           selene
         ];

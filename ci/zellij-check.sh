@@ -1,25 +1,7 @@
 #!/usr/bin/env bash
-#
-# Validate the zellij config and layout by actually starting a session.
-#
-# `zellij setup --check` is NOT sufficient: it accepted a layout that a real
-# session start rejected, and it cannot see semantic problems at all. The bug that
-# motivated this script was `new_tab_template { }` coming out empty, so tabs
-# created at runtime had no status bar - a valid file that behaved wrong.
-#
-# Two traps this script exists to avoid, both of which silently make the test
-# pass while testing zellij's built-in defaults instead of our files:
-#
-#   * Passing --config makes zellij resolve `default_layout "default"` from
-#     config.kdl against the layout DIRECTORY. Not finding it there, it falls back
-#     to the built-in `default` layout and ignores --layout entirely.
-#   * XDG_CONFIG_HOME is not honoured for this lookup; zellij went to
-#     $HOME/.config/zellij regardless. --config-dir (ZELLIJ_CONFIG_DIR) is the
-#     knob that actually works.
-#
-# So: stage both files into a throwaway directory, point --config-dir at it, and
-# assert on the live layout. This mirrors the paths home-manager creates.
-#
+# Validate the zellij config and layout by starting a real session.
+# `zellij setup --check` misses semantic problems. Use --config-dir: with
+# --config or XDG_CONFIG_HOME, zellij silently falls back to its built-in layout.
 set -uo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
@@ -43,8 +25,7 @@ mkdir -p "$tmp/zellij/layouts"
 cp config/zellij/config.kdl "$tmp/zellij/config.kdl"
 cp config/zellij/layouts/default.kdl "$tmp/zellij/layouts/default.kdl"
 
-# NB: cannot wrap this in a shell function - `timeout` execs a binary and cannot
-# run functions.
+# An array, not a function, because `timeout` cannot run shell functions.
 ZJ_ARGS=(--config-dir "$tmp/zellij")
 
 fail=0
@@ -71,8 +52,7 @@ if ! dump="$(timeout 30 zellij "${ZJ_ARGS[@]}" -s "$SESSION" action dump-layout 
   exit 1
 fi
 
-# Guard against the whole point of the script being defeated: if our layout were
-# ignored we would see zellij's built-in tab-bar + status-bar pairing.
+# The built-in layout uses status-bar; ours doesn't.
 echo "== zellij: our layout was actually used =="
 if printf '%s\n' "$dump" | grep -q "zellij:status-bar"; then
   echo "FAILED: session is using the built-in layout, not ours" >&2

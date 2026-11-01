@@ -1,5 +1,3 @@
--- options.lua
-
 vim.g.have_nerd_font = true
 vim.g.icons_enabled = true
 
@@ -11,8 +9,8 @@ vim.opt.relativenumber = true
 vim.opt.signcolumn = "yes"
 vim.opt.showmode = false
 vim.opt.showtabline = 0
-vim.opt.laststatus = 3 -- global statusline
-vim.opt.fillchars = { eob = " " } -- hide ~ on empty lines
+vim.opt.laststatus = 3
+vim.opt.fillchars = { eob = " " }
 vim.opt.colorcolumn = "0" -- no ruler; formatters own line length
 
 -- Editing
@@ -42,7 +40,7 @@ vim.opt.sidescrolloff = 8
 vim.opt.mousescroll = "ver:1,hor:0"
 vim.opt.selection = "old"
 
--- Folds (for nvim-ufo or native)
+-- Folds
 vim.opt.foldenable = true
 vim.opt.foldlevel = 99
 vim.opt.foldlevelstart = 99

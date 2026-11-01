@@ -27,7 +27,6 @@ keybinds clear-defaults=true {
         bind "l" "Right" { MoveFocus "Right"; }
         bind "j" "Down" { MoveFocus "Down"; }
         bind "k" "Up" { MoveFocus "Up"; }
-        // bind "p" { SwitchFocus; }
         bind "n" { NewPane; SwitchToMode "Normal"; }
         bind "d" { NewPane "Down"; SwitchToMode "Normal"; }
         bind "r" { NewPane "Right"; SwitchToMode "Normal"; }
@@ -38,12 +37,8 @@ keybinds clear-defaults=true {
         bind "e" { TogglePaneEmbedOrFloating; SwitchToMode "Normal"; }
         bind "c" { SwitchToMode "RenamePane"; PaneNameInput 0;}
 
-        // Swap layouts live here rather than on a global Alt binding, because
-        // Alt-. is zsh's insert-last-word and worth more than a rarely used
-        // layout cycle. Not in Tab mode either - , and . are BreakPane there.
-        //
-        // Finnish ISO note: , and . are unshifted, whereas [ and ] are AltGr+8
-        // and AltGr+9, so the brackets are only secondary bindings.
+        // Not on a global Alt binding: Alt-. is zsh's insert-last-word.
+        // [ and ] need AltGr on Finnish ISO, so , and . are primary.
         bind "," "[" { PreviousSwapLayout; }
         bind "." "]" { NextSwapLayout; }
     }
@@ -65,8 +60,6 @@ keybinds clear-defaults=true {
         bind "x" { CloseTab; SwitchToMode "Normal"; }
         bind "s" { ToggleActiveSyncTab; SwitchToMode "Normal"; }
         bind "b" { BreakPane; SwitchToMode "Normal"; }
-        // , and . mirror the swap-layout bindings; brackets need AltGr on a
-        // Finnish ISO keyboard so they are only the fallback.
         bind "." "]" { BreakPaneRight; SwitchToMode "Normal"; }
         bind "," "[" { BreakPaneLeft; SwitchToMode "Normal"; }
         bind "1" { GoToTab 1; SwitchToMode "Normal"; }
@@ -91,8 +84,6 @@ keybinds clear-defaults=true {
         bind "Ctrl b" "PageUp" "Left" "h" { PageScrollUp; }
         bind "d" { HalfPageScrollDown; }
         bind "u" { HalfPageScrollUp; }
-        // uncomment this and adjust key if using copy_on_select=false
-        // bind "Alt c" { Copy; }
     }
     search {
         bind "Alt s" { SwitchToMode "Normal"; }
@@ -122,12 +113,9 @@ keybinds clear-defaults=true {
         bind "Esc" { UndoRenamePane; SwitchToMode "Pane"; }
     }
 
-    // All modes but locked
     shared_except "locked" {
         bind "Ctrl g" { SwitchToMode "Locked"; }
         bind "Ctrl q" { Quit; }
-        // One-keystroke detach. Detaching leaves the session running so
-        // session_serialization can resurrect it; Ctrl-q destroys it instead.
         bind "Alt d" { Detach; }
         bind "Alt n" { NewPane; }
         bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
@@ -138,8 +126,6 @@ keybinds clear-defaults=true {
         bind "Alt -" { Resize "Decrease"; }
     }
 
-    // Keybinds to enter specific modes
-    // ...prevent entering already active mode
     shared_except "normal" "locked" {
         bind "Enter" "Esc" { SwitchToMode "Normal"; }
     }
@@ -166,8 +152,7 @@ ui {
     }
 }
 
-// Catppuccin Mocha, defined inline rather than relying on a built-in theme
-// name, so it works regardless of which themes a given zellij version ships.
+// Inline so it doesn't depend on which built-in themes a zellij version ships.
 themes {
     catppuccin-mocha {
         bg "#585b70"
@@ -189,26 +174,19 @@ theme "catppuccin-mocha"
 plugins {
     compact-bar { path "compact-bar"; }
 
-    // These two are unused but left just in case for fallback purposes
+    // Unused; kept as fallbacks.
     tab-bar { path "tab-bar"; }
     status-bar { path "status-bar"; }
 }
 
-// The shell runs `zellij attach --create main`, which cannot take --layout, so
-// the layout has to be named here instead. Refers to layouts/default.kdl.
+// `zellij attach --create` can't take --layout, so name it here.
 default_layout "default"
 
-// Whether sessions should be serialized to the cache folder (including their tabs/panes, cwds and running commands) so that they can later be resurrected
 session_serialization true
-// Whether pane viewports are serialized along with the session, default is false
 serialize_pane_viewport true
 
-// Stop the release-notes popup on every zellij upgrade.
 show_release_notes false
 
-// detach, not quit. This fires when the terminal window holding the session is
-// closed (SIGHUP/SIGTERM/SIGINT/SIGQUIT). With "quit" - which this config used to
-// set - closing kitty DESTROYED the session, so session_serialization had nothing
-// to resurrect. "detach" is also zellij's default.
+// Closing the terminal must not destroy the session, or serialization is useless.
 on_force_close "detach"
 pane_frames false

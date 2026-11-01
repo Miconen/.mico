@@ -1,38 +1,21 @@
-# Packages pacman owns inside WSL only. Official repos only - AUR entries live
-# in packages/aur-wsl.txt.
-#
-# UNTESTED - derived from the old packages/packages.txt manifest of the previous
-# Arch-on-WSL install.
+# pacman packages for WSL only. UNTESTED, derived from the old WSL manifest.
 
-# Direct3D12 Mesa driver, the only GPU path available under WSL.
-# mesa is also the VA-API provider since libva-mesa-driver was merged into it.
+# D3D12 is the only GPU path under WSL. mesa is the VA-API provider.
 vulkan-dzn
 vulkan-icd-loader
 mesa
 
-# Local LLM server. pacman, not nix: it is a system service, and nixpkgs'
-# ollama-cuda is unfree, so it is not in the binary cache and would build
-# CUDA from source. ollama-cuda pulls in the `cuda` toolkit (~5G) and talks
-# to the RTX 3070 through WSL's /usr/lib/wsl/lib/libcuda.so passthrough - no
-# Linux NVIDIA driver is installed or needed. The laptop does not get this:
-# 7G of RAM and a Carrizo APU cannot run anything useful.
-# ollama.service is enabled by bootstrap.sh; it listens on 127.0.0.1:11434.
+# pacman, not nix: system service, and nixpkgs' ollama-cuda is unfree (builds CUDA from source).
+# Uses WSL's libcuda passthrough; no Linux NVIDIA driver needed.
 ollama
 ollama-cuda
 
-# AUR build dependency. Keep makepkg on Arch's patched Go toolchain; mise's
-# upstream Go carries a different build suffix and cannot compile Arch's stdlib.
+# For AUR builds: mise's upstream Go can't compile Arch's stdlib.
 go
 
-# Was in the previous WSL manifest; drop it if you no longer need a local
-# database server.
 postgresql
 
-# Headed Chromium/Playwright runtime libs. Playwright's own
-# `--with-deps` installer only knows apt/dnf, so on Arch these were never
-# pulled in; headless mode worked (it uses the dependency-light
-# headless_shell binary) but headed mode failed to launch full chrome with
-# "error while loading shared libraries: libnspr4.so: ...".
+# Headed Chromium/Playwright libs; Playwright's --with-deps only knows apt/dnf.
 nss
 nspr
 atk
