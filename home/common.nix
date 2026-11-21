@@ -63,6 +63,7 @@
       difftastic
       yq-go
       air
+      pnpm
       uv
 
       zellij
