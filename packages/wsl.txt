@@ -10,6 +10,11 @@ mesa
 ollama
 ollama-cuda
 
+# GPU in podman via CDI (--device nvidia.com/gpu=all). The spec is regenerated
+# at each boot because Windows driver updates move the libs; bootstrap.sh adds
+# a drop-in so nvidia-cdi-refresh.service runs on WSL.
+nvidia-container-toolkit
+
 # For AUR builds: mise's upstream Go can't compile Arch's stdlib.
 go
 

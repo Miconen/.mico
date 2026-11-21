@@ -640,6 +640,32 @@ else
   run sudo install -Dm644 "$containers_conf_src" "$containers_conf_dst"
 fi
 
+# The stock unit's conditions never pass on WSL; the drop-in lifts them.
+cdi_dropin_src="$REPO/config/nvidia/cdi-refresh-wsl.conf"
+cdi_dropin_dst=/etc/systemd/system/nvidia-cdi-refresh.service.d/wsl.conf
+if [[ $HOST != wsl ]]; then
+  skip "NVIDIA CDI only set up on WSL"
+elif ! command -v nvidia-ctk >/dev/null; then
+  skip "nvidia-container-toolkit not installed"
+elif ! command -v systemctl >/dev/null || ! [[ -d /run/systemd/system ]]; then
+  skip "systemd not running - cannot refresh the NVIDIA CDI spec"
+else
+  if [[ -f $cdi_dropin_dst ]] && cmp -s "$cdi_dropin_src" "$cdi_dropin_dst"; then
+    skip "$cdi_dropin_dst already up to date"
+  else
+    ok "letting nvidia-cdi-refresh.service run on WSL ($cdi_dropin_dst)"
+    run sudo install -Dm644 "$cdi_dropin_src" "$cdi_dropin_dst"
+    run sudo systemctl daemon-reload
+  fi
+
+  if [[ -s /var/run/cdi/nvidia.yaml ]]; then
+    skip "NVIDIA CDI spec present (/var/run/cdi/nvidia.yaml)"
+  else
+    ok "generating NVIDIA CDI spec for podman GPU access"
+    run sudo systemctl start nvidia-cdi-refresh.service || warn "nvidia-cdi-refresh.service failed - see journalctl -u nvidia-cdi-refresh"
+  fi
+fi
+
 podman_storage_script="$REPO/scripts/podman-storage.sh"
 if ! command -v podman >/dev/null; then
   skip "podman not installed"
